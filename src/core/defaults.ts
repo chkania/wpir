@@ -15,6 +15,8 @@ import type { Inputs } from './types';
  * § 35c EStG: 20 % (7/7/6), max. 40,000 €, costs max. 200,000 €, completion by end of 2029 (§ 52 (35a) EStG).
  */
 export const FUNDING_SOURCE_DATE = '2026-11-18';
+/** Automatic application month (F1.5): this many months before the commissioning month, if no month is entered. */
+export const AUTO_APPLICATION_LEAD_MONTHS = 4;
 
 /** Jan … Dec – share of the annual heat demand (Wärmebedarf) (space heating (Raumwärme) + 15 % hot water (Warmwasser)), sum = 1. */
 export const HEAT_PROFILE: readonly number[] = [
@@ -98,7 +100,7 @@ export function createDefaults(today: Date = new Date()): Inputs {
       maintenance: 150,
       lifeYears: 20,
       installMonth: formatMonth(parseMonth(start) + 6),
-      leadMonths: 4,
+      applicationMonth: '',
       euOrigin: true,
       separateTariff: true,
       elecPriceCt: 24,

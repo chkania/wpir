@@ -71,6 +71,17 @@ export function heatingAgeNote(i: Inputs): string {
   const reach = installed + Math.ceil(i.funding.kgbMinGasAge * 12);
   return `${text} ${i.funding.kgbMinGasAge} Jahre ${reach <= start ? 'erreicht seit' : 'erreicht'} ${deMonth(reach)}.`;
 }
+/**
+ * Note under the application month (F1.5): the automatic month when the field is empty. Lead time 4 months
+ * as in AUTO_APPLICATION_LEAD_MONTHS (core/defaults.ts); inline here because this file may only import types.
+ */
+export function applicationMonthNote(i: Inputs): string {
+  if (i.heatPump.applicationMonth !== '') return '';
+  const install = absMonth(i.heatPump.installMonth);
+  if (install === null) return '';
+  const auto = install - 4;
+  return `automatisch: ${Math.floor(auto / 12)}-${String((auto % 12) + 1).padStart(2, '0')}`;
+}
 const hasPv = (i: Inputs) => i.heatPump.pvKwp > 0;
 const isGas = (i: Inputs) => i.oldHeating.fuel === 'gas';
 const isOil = (i: Inputs) => i.oldHeating.fuel === 'oil';
@@ -218,7 +229,13 @@ export const SECTIONS: Section[] = [
       { path: 'heatPump.maintenance', label: 'Wartung', type: 'number', unit: '€/Jahr', step: 10, min: 0 },
       { path: 'heatPump.lifeYears', label: 'Lebensdauer', type: 'number', unit: 'Jahre', step: 1, min: 1 },
       { path: 'heatPump.euOrigin', label: 'Wärmepumpe mit Ursprung in der EU', type: 'checkbox', help: 'Ab dem 1. Quartal 2027: 15 % Grundförderung + 15 % Wertschöpfungs-Bonus nur für Wärmepumpen aus der EU, sonst nur 15 %.' },
-      { path: 'heatPump.leadMonths', label: 'Vorlauf Förderantrag', type: 'number', unit: 'Monate', step: 1, min: 0, help: 'Antrag vor Vorhabenbeginn; die Förderkonditionen richten sich nach dem Antragsdatum.' },
+      {
+        path: 'heatPump.applicationMonth',
+        label: 'Antragsmonat',
+        type: 'month',
+        help: 'Monat der Antragstellung der KfW-Förderung; Boni und Höchstbeträge richten sich nach dem Antragsdatum. Leer = automatisch 4 Monate vor der Inbetriebnahme. Der Antrag muss vor Vorhabenbeginn gestellt werden und darf nicht nach der Inbetriebnahme liegen.',
+        note: applicationMonthNote,
+      },
     ],
   },
   {

@@ -706,3 +706,37 @@ describe('F37 Gespeicherte Szenarien im Browser', () => {
     expect(JSON.parse(store.getItem(STORAGE_KEY)!).defaultsAsOf).toBe('2026-11-17');
   });
 });
+
+describe('F1.5/F9.5 Antragsmonat in gespeicherten Szenarien und Varianten (AK8)', () => {
+  /** Stored entry with the former lead time (leadMonths 2, commissioning 2027-05) instead of applicationMonth. */
+  const oldLeadEntry = (name: string) => {
+    const e = entryFor(name, (i) => (i.heatPump.installMonth = '2027-05')) as { name: string; savedAt: string; inputs: Record<string, any> };
+    delete e.inputs.heatPump.applicationMonth;
+    e.inputs.heatPump.leadMonths = 2;
+    return e;
+  };
+
+  it('AK8 F37.6 Abrufen eines Szenarios mit leadMonths 2: fester Antragsmonat 03/2027 und Meldung', () => {
+    seed([oldLeadEntry('Altes Angebot')]);
+    const { root, app } = mount();
+    openScenarios(root);
+    btn(root, '[data-sc-recall="0"]').click();
+    confirmOk(root);
+    expect(app.getInputs().heatPump.applicationMonth).toBe('2027-03');
+    expect(root.querySelector<HTMLInputElement>('[data-path="heatPump.applicationMonth"]')!.value).toBe('2027-03');
+    expect(root.querySelector('#notice')!.textContent).toContain('03/2027');
+    expect(root.querySelector('#notice')!.textContent).toContain('dem gespeicherten Szenario');
+  });
+
+  it('AK8 F31.4 Variante aus einem Szenario mit leadMonths 2: festgelegter Antragsmonat, eine Korrektur gemeldet', () => {
+    seed([oldLeadEntry('Altes Angebot')]);
+    const { root } = mount();
+    btn(root, '#btn-variants').click();
+    btn(root, '#var-saved-btn').click();
+    btn(root, '[data-var-saved="0"]').click();
+    expect(root.querySelector('#var-status')!.textContent).toBe('„Altes Angebot“ hinzugefügt. (1 Wert(e) korrigiert)');
+    // Second variant (current inputs, automatic month) so that the comparison shows the differing month
+    btn(root, '#var-current').click();
+    expect(root.querySelector('#var-result')!.textContent).toContain('03/2027');
+  });
+});

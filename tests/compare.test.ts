@@ -94,3 +94,34 @@ describe('F7.3 Begründung des günstigsten Zeitpunkts', () => {
     expect(explainBest(compareInstallTimes(inp), inp)).toBeNull();
   });
 });
+
+describe('F1.5/F7.1 Antragsmonat im Zeitpunktvergleich (AK5, AK6)', () => {
+  it('AK5 leerer Antragsmonat wandert mit: Einbau 2027-11 → Antrag 2027-07', () => {
+    const inp = defaults();
+    inp.heatPump.applicationMonth = '';
+    const row = compareInstallTimes(inp).rows.find((r) => formatMonth(r.installMonth) === '2027-11')!;
+    const explicit = defaults();
+    explicit.heatPump.applicationMonth = '2027-07';
+    const fixed = compareInstallTimes(explicit).rows.find((r) => formatMonth(r.installMonth) === '2027-11')!;
+    expect(row.kfwSubsidy).toBe(fixed.kfwSubsidy);
+    expect(row.kgbRate).toBe(fixed.kgbRate);
+    expect(row.warnings.some((w) => w.includes('Antragsmonat'))).toBe(false);
+  });
+
+  it('AK6 fester Antragsmonat 2027-03: bei Einbau 2026-11 rutscht der Antrag auf 11/2026 (mit Hinweis), bei 2027-11 bleibt er 03/2027', () => {
+    const inp = defaults();
+    inp.heatPump.applicationMonth = '2027-03';
+    const c = compareInstallTimes(inp);
+    const early = c.rows.find((r) => formatMonth(r.installMonth) === '2026-11')!;
+    expect(early.warnings.some((w) => w.includes('Antragsmonat') && w.includes('11/2026'))).toBe(true);
+    // Einbau 2027-11 is after the fixed month 2027-03: the application stays at 03/2027 (12 % climate speed bonus, F5.1)
+    const late = c.rows.find((r) => formatMonth(r.installMonth) === '2027-11')!;
+    expect(late.kgbRate).toBe(0.12);
+    expect(late.warnings.some((w) => w.includes('Antragsmonat'))).toBe(false);
+    // Einbau 2026-11 is before the fixed month: the application is moved to the commissioning month (same as an explicit 2026-11)
+    const sameMonth = defaults();
+    sameMonth.heatPump.applicationMonth = '2026-11';
+    const atInstall = compareInstallTimes(sameMonth).rows.find((r) => formatMonth(r.installMonth) === '2026-11')!;
+    expect(early.kgbRate).toBe(atInstall.kgbRate);
+  });
+});

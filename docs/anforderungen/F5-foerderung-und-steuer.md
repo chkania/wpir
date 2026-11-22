@@ -1,6 +1,6 @@
 # F5 – Förderung und Steuer
 
-- F5.1 **KfW 458** (Zuschuss, Antragsmonat maßgeblich):
+- F5.1 **KfW 458** (Zuschuss, Antragsmonat maßgeblich; Eingabe und automatischer Monat nach F1.4–F1.6):
   - Grundförderung 30 %; ab Anträgen im 1. Quartal 2027 (angenommen ab 01/2027) für Wärmepumpen 15 % plus Wertschöpfungs-Bonus 15 % bei EU-Ursprung (Richtlinie Nr. 8.4.1 c, 8.4.6). Eingabe „Wärmepumpe mit Ursprung in der EU“ (Default: ja).
   - Klimageschwindigkeitsbonus (nur selbstgenutzt, Ersatz einer funktionstüchtigen Öl-Heizung oder einer Gasheizung ≥ 20 Jahre): 16 %, ab 02/2027 halbjährlich (Feb/Aug) −4 Prozentpunkte, ab Anträgen 08/2028 entfallen.
   - Einkommensbonus (nur selbstgenutzt, zu versteuerndes Haushaltseinkommen, eingegeben als Einkommensbereich nach F5.4): ≤ 30.000 € → 40 %, ≤ 40.000 € → 30 %, ≤ 50.000 € → 10 %; mit kindergeldberechtigtem Kind < 18 Grenzen +10.000 €. Gerechnet wird mit dem Rechenwert (Obergrenze) des gewählten Bereichs.

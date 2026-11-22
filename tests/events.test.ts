@@ -101,6 +101,11 @@ describe('F10 Wichtige Ereignisse', () => {
     expect(last.amount).toBeLessThan(0);
   });
 
+  it('AK13 F1.5 Standard: Ereignis „Förderantrag KfW 458 stellen“ vier Monate vor Inbetriebnahme (Antragsmonat leer)', () => {
+    const { timeline } = ev(userCase((i) => (i.heatPump.applicationMonth = '')));
+    expect(find(timeline, /Förderantrag/)!.month).toBe(find(timeline, /Inbetriebnahme/)!.month! - 4);
+  });
+
   it('F10.3 Zuschuss, Inbetriebnahme, Antrag und Kreditereignisse', () => {
     const { timeline } = ev(userCase());
     expect(find(timeline, /Förderantrag/)!.month).toBe(find(timeline, /Inbetriebnahme/)!.month! - 4);

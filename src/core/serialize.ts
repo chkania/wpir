@@ -3,6 +3,7 @@ import { deflateSync, Inflate } from 'fflate';
 import { APP_VERSION } from '../version';
 import { DEFAULTS_AS_OF } from './default-history';
 import { formatMonth, formatMonthDe, parseMonth, tryParseMonth } from './dates';
+import { AUTO_APPLICATION_LEAD_MONTHS } from './defaults';
 import { incomeRangeOfAmount } from './income-range';
 import { checkValue, cleanDocuments, TEXT_LIMITS, type InputIssue } from './validate';
 
@@ -16,7 +17,24 @@ const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !
  * clamped or replaced by the default if necessary (F9.5). Findings end up in `issues`.
  */
 export function mergeInputs(defaults: Inputs, data: unknown, issues: InputIssue[] = []): Inputs {
-  return mergeObj(defaults as unknown as Obj, migrate(defaults, data, issues), '', issues) as unknown as Inputs;
+  const merged = mergeObj(defaults as unknown as Obj, migrate(defaults, data, issues), '', issues) as unknown as Inputs;
+  return limitApplicationMonth(merged, issues);
+}
+
+/**
+ * A fixed application month (Antragsmonat) after the commissioning month is moved to the commissioning month,
+ * with a notice (F1.6). Empty (automatic) or invalid values are left to the field check.
+ */
+function limitApplicationMonth(inputs: Inputs, issues: InputIssue[]): Inputs {
+  const app = tryParseMonth(inputs.heatPump.applicationMonth);
+  if (app === null) return inputs;
+  const install = parseMonth(inputs.heatPump.installMonth); // valid after the merge (checked before)
+  if (app <= install) return inputs;
+  issues.push({
+    path: 'heatPump.applicationMonth',
+    reason: `liegt nach der Inbetriebnahme (${formatMonthDe(install)}) – auf diesen Monat begrenzt`,
+  });
+  return { ...inputs, heatPump: { ...inputs.heatPump, applicationMonth: formatMonth(install) } };
 }
 
 /** Start month (absolute) of a raw data set, else of the defaults. */
@@ -45,6 +63,7 @@ function migrate(defaults: Inputs, data: unknown, issues: InputIssue[]): unknown
       });
     }
   }
+  data = migrateLeadMonths(defaults, data, issues);
   if (isObj(data) && isObj(data.heatPump)) {
     const share = data.heatPump.pvShare;
     if (typeof share === 'number' && share > 0 && data.heatPump.pvKwp === undefined) {
@@ -59,6 +78,32 @@ function migrate(defaults: Inputs, data: unknown, issues: InputIssue[]): unknown
   if (typeof b.buildingAgeYears !== 'number' || b.constructionYear !== undefined || !Number.isFinite(b.buildingAgeYears)) return data;
   const startYear = Math.floor(rawStart(defaults, data) / 12);
   return { ...data, building: { ...b, constructionYear: Math.round(startYear - b.buildingAgeYears) } };
+}
+
+/**
+ * Migrates the former lead time in months (heatPump.leadMonths, F1.5, F9.5): 4 months (the default) becomes an
+ * empty, automatic application month; any other value becomes a fixed application month
+ * (commissioning month minus the lead time), reported. An existing `applicationMonth` takes precedence.
+ */
+function migrateLeadMonths(defaults: Inputs, data: unknown, issues: InputIssue[]): unknown {
+  if (!isObj(data) || !isObj(data.heatPump)) return data;
+  const h = data.heatPump;
+  if (h.leadMonths === undefined || h.applicationMonth !== undefined) return data;
+  const path = 'heatPump.applicationMonth';
+  const lead = h.leadMonths;
+  if (typeof lead !== 'number' || !Number.isFinite(lead)) {
+    issues.push({ path, reason: 'ungültiger Wert, Standardwert verwendet' });
+    return data;
+  }
+  const months = Math.min(Math.max(Math.round(lead), 0), 120);
+  if (months === AUTO_APPLICATION_LEAD_MONTHS) return { ...data, heatPump: { ...h, applicationMonth: '' } };
+  const install = tryParseMonth(typeof h.installMonth === 'string' ? h.installMonth : null) ?? parseMonth(defaults.heatPump.installMonth);
+  const fixed = install - months;
+  issues.push({
+    path,
+    reason: `aus dem früheren Vorlauf (${months} Monate) auf den festen Antragsmonat ${formatMonthDe(fixed)} umgerechnet – bitte prüfen`,
+  });
+  return { ...data, heatPump: { ...h, applicationMonth: formatMonth(fixed) } };
 }
 
 /**

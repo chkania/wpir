@@ -1,7 +1,9 @@
 // @vitest-environment happy-dom
 import { readdirSync, readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { SECTIONS, getPath } from '../src/ui/fields';
+import { applicationMonthNote, SECTIONS, getPath } from '../src/ui/fields';
+import { AUTO_APPLICATION_LEAD_MONTHS } from '../src/core/defaults';
+import { formatMonth, parseMonth } from '../src/core/dates';
 import { INTRO_KEY, LEGACY_DESIGN_KEY, mountApp, PRIVACY_ACK_KEY, STORAGE_KEY, THEME_KEY } from '../src/ui/app';
 import { decodeHash, encodeHash } from '../src/core/serialize';
 import { APP_VERSION } from '../src/version';
@@ -1442,5 +1444,178 @@ describe('F38 Werkzeugleiste mit Menüs', () => {
       expect(css, f).not.toMatch(/\.toolbar button/);
       expect(css, f).not.toMatch(/\.toolbar \.design-switch/);
     }
+  });
+});
+
+describe('F1.5/F1.6 Antragsmonat im Formular (AK1, AK2, AK4)', () => {
+  beforeEach(() => {
+    store.clear();
+    store.setItem(INTRO_KEY, '1');
+  });
+  const field = (root: HTMLElement) => root.querySelector<HTMLInputElement>('[data-path="heatPump.applicationMonth"]')!;
+  const errorOf = (root: HTMLElement) => root.querySelector('#f-heatPump-applicationMonth-err')!.textContent;
+
+  it('AK1 „Antragsmonat“ ist ein Monatsfeld im Abschnitt Wärmepumpe; „Vorlauf Förderantrag“ ist entfernt', () => {
+    const { root } = mount();
+    expect(field(root).type).toBe('month');
+    expect(root.querySelector('[data-field="heatPump.applicationMonth"] label')!.textContent).toBe('Antragsmonat');
+    expect(root.querySelector('[data-path="heatPump.leadMonths"]')).toBeNull();
+    expect(root.innerHTML).not.toContain('Vorlauf Förderantrag');
+    const section = root.querySelector('[data-field="heatPump.applicationMonth"]')!.closest('details.section');
+    expect(section?.querySelector('summary')?.textContent).toContain('Wärmepumpe');
+  });
+
+  it('AK2 leer: Anzeige „automatisch: 2027-01“ bei Inbetriebnahme 2027-05, sonst kein Hinweis', () => {
+    const { root } = mount();
+    setValue(root, 'heatPump.installMonth', '2027-05');
+    const note = () => root.querySelector('[data-field="heatPump.applicationMonth"] .field-note')!.textContent;
+    expect(note()).toBe('automatisch: 2027-01');
+    setValue(root, 'heatPump.applicationMonth', '2027-03');
+    expect(note()).toBe('');
+  });
+
+  it('AK2 Standardtext „4 Monate“ im Feldhilfetext und Hinweis folgen AUTO_APPLICATION_LEAD_MONTHS', () => {
+    const f = SECTIONS.flatMap((s) => s.fields).find((x) => x.path === 'heatPump.applicationMonth')!;
+    expect(f.help).toContain(`Leer = automatisch ${AUTO_APPLICATION_LEAD_MONTHS} Monate vor der Inbetriebnahme`);
+    const i = defaults();
+    i.heatPump.installMonth = '2027-05';
+    expect(applicationMonthNote(i)).toBe(`automatisch: ${formatMonth(parseMonth('2027-05') - AUTO_APPLICATION_LEAD_MONTHS)}`);
+  });
+
+  it('AK2 Hinweis ohne gültige Inbetriebnahme bleibt leer', () => {
+    const i = defaults();
+    i.heatPump.installMonth = 'kaputt';
+    expect(applicationMonthNote(i)).toBe('');
+  });
+
+  it('AK4 Antragsmonat nach der Inbetriebnahme: Fehlertext als Text, Feld rot, Wert nicht übernommen', () => {
+    const { root, app } = mount();
+    setValue(root, 'heatPump.installMonth', '2027-05');
+    setValue(root, 'heatPump.applicationMonth', '2027-06');
+    expect(errorOf(root)).toContain('Der Antragsmonat darf nicht nach der Inbetriebnahme liegen.');
+    expect(field(root).classList.contains('invalid')).toBe(true);
+    expect(field(root).getAttribute('aria-invalid')).toBe('true');
+    expect(app.getInputs().heatPump.applicationMonth).toBe('');
+  });
+
+  it('AK4 gleicher Monat wie die Inbetriebnahme ist gültig und wird übernommen', () => {
+    const { root, app } = mount();
+    setValue(root, 'heatPump.installMonth', '2027-05');
+    setValue(root, 'heatPump.applicationMonth', '2027-05');
+    expect(field(root).classList.contains('invalid')).toBe(false);
+    expect(errorOf(root)).toBe('');
+    expect(app.getInputs().heatPump.applicationMonth).toBe('2027-05');
+  });
+
+  it('AK4 Monat mit ungültiger Zahl (2027-13, Browser: badInput) zeigt die Teil-Meldung, Wert bleibt', () => {
+    const { root, app } = mount();
+    const el = field(root);
+    // The browser gives an empty value for an impossible month and flags badInput (not the automatic month)
+    Object.defineProperty(el, 'validity', { value: { badInput: true }, configurable: true });
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(errorOf(root)).toContain('Bitte den Monat vollständig eingeben oder das Feld ganz leeren.');
+    expect(el.classList.contains('invalid')).toBe(true);
+    expect(app.getInputs().heatPump.applicationMonth).toBe('');
+  });
+});
+
+describe('F9.5 Antragsmonat beim Laden aus dem Speicher (AK8)', () => {
+  beforeEach(() => {
+    store.clear();
+    store.setItem(INTRO_KEY, '1');
+  });
+  it('AK8 eigene gespeicherte Eingaben mit leadMonths 2: fester Antragsmonat 03/2027 und Meldung beim Start', () => {
+    const data = JSON.parse(JSON.stringify(defaults()));
+    delete data.heatPump.applicationMonth;
+    data.heatPump.leadMonths = 2;
+    data.heatPump.installMonth = '2027-05';
+    store.setItem(STORAGE_KEY, JSON.stringify(data));
+    const { root, app } = mount();
+    expect(app.getInputs().heatPump.applicationMonth).toBe('2027-03');
+    expect(root.querySelector('#notice')!.textContent).toContain('03/2027');
+  });
+});
+
+describe('F1.6 Antragsmonat: vollständig leeren und unvollständige Eingabe (Browser-Fall)', () => {
+  beforeEach(() => {
+    store.clear();
+    store.setItem(INTRO_KEY, '1');
+  });
+  const field = (root: HTMLElement) => root.querySelector<HTMLInputElement>('[data-path="heatPump.applicationMonth"]')!;
+  const errorOf = (root: HTMLElement) => {
+    const err = root.querySelector<HTMLElement>('#f-heatPump-applicationMonth-err')!;
+    return err.hidden ? '' : err.textContent;
+  };
+  /** Chromium: a partly entered or cleared month has badInput true; the value is "". */
+  const setBadInput = (el: HTMLInputElement, bad: boolean) =>
+    Object.defineProperty(el, 'validity', { value: { badInput: bad }, configurable: true });
+  const PARTIAL = 'Bitte den Monat vollständig eingeben oder das Feld ganz leeren. Der bisherige Wert wird weiter verwendet.';
+
+  it('AK4 Browser: Monat nur teilweise geleert (badInput, Wert "") zeigt die Teil-Meldung, der alte Wert bleibt', () => {
+    const { root, app } = mount();
+    setValue(root, 'heatPump.applicationMonth', '2027-03');
+    const el = field(root);
+    el.value = '';
+    setBadInput(el, true);
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(errorOf(root)).toBe(PARTIAL);
+    expect(el.classList.contains('invalid')).toBe(true);
+    expect(app.getInputs().heatPump.applicationMonth).toBe('2027-03');
+  });
+
+  it('AK4 Browser: Jahr oder Monat unvollständig getippt (badInput) zeigt die Teil-Meldung, nicht die Bereichsmeldung', () => {
+    const { root, app } = mount();
+    const el = field(root);
+    setBadInput(el, true);
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(errorOf(root)).toBe(PARTIAL);
+    expect(errorOf(root)).not.toContain('zwischen 2000 und 2150');
+    expect(app.getInputs().heatPump.applicationMonth).toBe('');
+  });
+
+  it('AK4 Browser: vollständig geleert (Wert "", badInput false) nach Teil-Meldung: Verlassen löscht den Fehler, leer = automatisch', () => {
+    const { root, app } = mount();
+    setValue(root, 'heatPump.applicationMonth', '2027-03');
+    const el = field(root);
+    el.value = '';
+    setBadInput(el, true);
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(errorOf(root)).not.toBe('');
+    // Chromium: last segment cleared → badInput false, no input/change event fires; leaving the field re-checks
+    setBadInput(el, false);
+    el.dispatchEvent(new Event('focusout', { bubbles: true }));
+    expect(errorOf(root)).toBe('');
+    expect(el.classList.contains('invalid')).toBe(false);
+    expect(app.getInputs().heatPump.applicationMonth).toBe('');
+  });
+
+  it('AK4 Browser: Backspace (keyup) nach vollständigem Leeren löscht den Fehler sofort', () => {
+    const { root, app } = mount();
+    setValue(root, 'heatPump.applicationMonth', '2027-03');
+    const el = field(root);
+    el.value = '';
+    setBadInput(el, true);
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    setBadInput(el, false);
+    el.dispatchEvent(new KeyboardEvent('keyup', { key: 'Backspace', bubbles: true }));
+    expect(errorOf(root)).toBe('');
+    expect(app.getInputs().heatPump.applicationMonth).toBe('');
+  });
+
+  it('AK4 Browser: andere Tasten (keyup „a“) lösen keine Prüfung aus; der Fehler bleibt', () => {
+    const { root } = mount();
+    const el = field(root);
+    setBadInput(el, true);
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    setBadInput(el, false);
+    el.dispatchEvent(new KeyboardEvent('keyup', { key: 'a', bubbles: true }));
+    expect(errorOf(root)).toBe(PARTIAL);
+  });
+
+  it('AK4 Browser: echter Wert außerhalb 2000–2150 bekommt weiterhin die Bereichsmeldung', () => {
+    const { root, app } = mount();
+    setValue(root, 'heatPump.applicationMonth', '1999-01');
+    expect(errorOf(root)).toContain('zwischen 2000 und 2150');
+    expect(app.getInputs().heatPump.applicationMonth).toBe('');
   });
 });

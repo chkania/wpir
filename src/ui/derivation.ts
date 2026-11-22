@@ -216,6 +216,14 @@ function investHtml(inp: Inputs, run: RunResult): string {
     ${calcTable(`Investition bei Inbetriebnahme ${fmtMonth(v.month)}`, rows)}`;
 }
 
+/** Explanation of the application month (F1.5, F32.2): automatic (lead time) or fixed. Months as MM/JJJJ like the rest of the Rechenweg. */
+function applicationExplanation(inp: Inputs, appMonth: number, install: number): string {
+  if (inp.heatPump.applicationMonth === '') {
+    return `automatisch: Inbetriebnahme ${fmtMonth(install)} minus ${install - appMonth} Monate = ${fmtMonth(appMonth)}`;
+  }
+  return `festgelegt: ${fmtMonth(appMonth)}`;
+}
+
 function kfwHtml(inp: Inputs, run: RunResult): string {
   const k = run.kfw.kfw;
   if (!k) return '<p>Kein KfW-Zuschuss: Die Wärmepumpe liegt außerhalb des Betrachtungszeitraums.</p>';
@@ -224,7 +232,7 @@ function kfwHtml(inp: Inputs, run: RunResult): string {
   const base = k.grundRate + k.wsbRate;
   const sum = base + k.kgbRate + k.incomeRate;
   const rows: CalcRow[] = [
-    ['Antragsmonat', `Inbetriebnahme ${fmtMonth(run.kfw.installMonth)} − ${inp.heatPump.leadMonths} Monate Vorlauf`, fmtMonth(k.appMonth)],
+    ['Antragsmonat', applicationExplanation(inp, k.appMonth, run.kfw.installMonth!), fmtMonth(k.appMonth)],
     ['Grundförderung', 'Satz im Antragsmonat', pct(k.grundRate)],
   ];
   if (k.wsbRate > 0) rows.push(['Wertschöpfungs-Bonus', 'Wärmepumpe mit EU-Ursprung', pct(k.wsbRate)]);
@@ -245,7 +253,7 @@ function kfwHtml(inp: Inputs, run: RunResult): string {
     const loan = run.kfw.loans.find((l) => l.extras.some((x) => x.label === 'Zuschuss' && x.applied > 0));
     rows.push(['Auszahlung', `Inbetriebnahme + ${Math.round(inp.financing.subsidyDelayMonths)} Monate${loan ? `, als Sondertilgung des ${loan.name.replace(/^(KfW-Kredit|Bankkredit)/, '$1s')}` : ''}`, fmtMonth(run.kfw.subsidyMonth)]);
   }
-  return `<p>Der Zuschuss der KfW (Programm 458) ist ein Prozentsatz der förderfähigen Kosten. Die Sätze hängen vom Antragsmonat ab – der Antrag muss vor dem Vertrag gestellt werden, deshalb rechnet der Rechner mit dem Vorlauf vor der Inbetriebnahme.${inp.building.ownerOccupied ? '' : ' Boni gibt es nur bei Selbstnutzung.'} Grenzwerte: Höchstsatz ${pct(f.maxRate)}, bei niedrigem Einkommen ${pct(f.maxRateLowIncome)}.</p>
+  return `<p>Der Zuschuss der KfW (Programm 458) ist ein Prozentsatz der förderfähigen Kosten. Die Sätze hängen vom Antragsmonat ab – der Antrag muss vor dem Vertrag gestellt werden, deshalb rechnet der Rechner mit dem eingetragenen Antragsmonat, sonst mit 4 Monaten vor der Inbetriebnahme.${inp.building.ownerOccupied ? '' : ' Boni gibt es nur bei Selbstnutzung.'} Grenzwerte: Höchstsatz ${pct(f.maxRate)}, bei niedrigem Einkommen ${pct(f.maxRateLowIncome)}.</p>
     ${calcTable('KfW-Zuschuss', rows)}
     ${notesHtml(k.notes)}`;
 }

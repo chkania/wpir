@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { parseMonth } from '../src/core/dates';
 import { encodeHash } from '../src/core/serialize';
 import { runAll } from '../src/core/simulation';
 import type { Inputs } from '../src/core/types';
@@ -201,5 +202,34 @@ describe('F32 Rechenweg – Seite und Bedienung', () => {
     const { html } = renderHelp('Siehe [Rechenweg](./rechenweg.html) und [Hilfe](./hilfe.html).');
     expect(html).toContain('<a href="./rechenweg.html">Rechenweg</a>');
     expect(html).toContain('<a href="./hilfe.html">Hilfe</a>');
+  });
+});
+
+describe('F32.2 Rechenweg Antragsmonat (AK10)', () => {
+  const rowsText = (html: string) => text(html);
+  it('AK10 automatisch: „Inbetriebnahme 05/2027 minus 4 Monate = 01/2027“', () => {
+    const i = pinned();
+    i.heatPump.installMonth = '2027-05';
+    i.heatPump.applicationMonth = '';
+    const { html } = derivationHtml(i, 'default');
+    expect(rowsText(html)).toContain('automatisch: Inbetriebnahme 05/2027 minus 4 Monate = 01/2027');
+  });
+
+  it('AK14 Rechenweg und Ergebnis nennen denselben Antragsmonat aus demselben Lauf (keine zweite Rechnung)', () => {
+    const i = pinned();
+    i.heatPump.installMonth = '2027-05';
+    i.heatPump.applicationMonth = '2027-03';
+    const { html, run } = derivationHtml(i, 'default');
+    expect(run.kfw.kfw!.appMonth).toBe(parseMonth('2027-03'));
+    expect(text(html)).toContain('festgelegt: 03/2027');
+  });
+
+  it('AK10 festgelegt: „festgelegt: 03/2027“', () => {
+    const i = pinned();
+    i.heatPump.installMonth = '2027-05';
+    i.heatPump.applicationMonth = '2027-03';
+    const { html } = derivationHtml(i, 'default');
+    expect(rowsText(html)).toContain('festgelegt: 03/2027');
+    expect(rowsText(html)).not.toContain('automatisch: Inbetriebnahme');
   });
 });

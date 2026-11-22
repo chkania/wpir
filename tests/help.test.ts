@@ -141,3 +141,12 @@ describe('F19 Projektlinks und Mitmachen', () => {
     expect(renderDocPage({ markdown: '# T\n\nx', subtitle: 's' }).html).toContain(`<a href="${REPO_URL}">`);
   });
 });
+
+describe('F1.5 Handbuch Antragsmonat (AK12)', () => {
+  it('AK12 beschreibt Feld, Automatik (leer = 4 Monate vor Inbetriebnahme) und festen Monat; „Vorlauf Förderantrag“ entfällt', () => {
+    for (const t of ['**Antragsmonat**', 'automatisch', '4 Monaten vor der Inbetriebnahme', 'festen Antragsmonat', 'Früher Antrag, späterer Einbau']) {
+      expect(handbook, t).toContain(t);
+    }
+    expect(handbook).not.toContain('| **Vorlauf Förderantrag** |');
+  });
+});

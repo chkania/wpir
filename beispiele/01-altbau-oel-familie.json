@@ -65,7 +65,7 @@
     "maintenance": 150,
     "lifeYears": 20,
     "installMonth": "2027-04",
-    "leadMonths": 4,
+    "applicationMonth": "",
     "euOrigin": true,
     "separateTariff": true,
     "elecPriceCt": 24,
