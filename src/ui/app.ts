@@ -34,7 +34,7 @@ import {
 } from '../core/scenario-store';
 import { SCENARIO_TEXT, UNNAMED, savedPickHtml, scenarioListHtml } from './scenarios';
 import type { Inputs, ScenarioKind, ScenarioResult } from '../core/types';
-import { cleanDocuments, DOCUMENT_TITLE_MAX, DOCUMENT_URL_MAX, MAX_DOCUMENTS, monthYears, NUMBER_LIMITS, numberRange, TEXT_LIMITS, validMonth, type InputIssue } from '../core/validate';
+import { cleanDocuments, DOCUMENT_TITLE_MAX, DOCUMENT_URL_MAX, installBounds, MAX_DOCUMENTS, monthBounds, monthRangeLabel, NUMBER_LIMITS, numberRange, TEXT_LIMITS, validMonth, type InputIssue } from '../core/validate';
 import { chartTables, type ChartId } from './charts';
 
 /** Chart.js module, loaded on demand so that it does not delay the first display (N14). */
@@ -177,7 +177,9 @@ function showDialog(dlg: HTMLDialogElement): void {
 export function mountApp(root: HTMLElement, env: AppEnv = {}): AppController {
   const storage = env.storage === undefined ? safeStorage() : env.storage;
   const defaults = createDefaults(env.today ?? new Date());
-  const initial = loadInitial(defaults, storage);
+  /** Check date for the commissioning windows (F1.7, F1.8): the same date as the defaults. */
+  const checkDate = env.today ?? new Date();
+  const initial = loadInitial(defaults, storage, checkDate);
   let inputs = initial.inputs;
   // Shared link while own inputs exist: do not silently overwrite them (F9.6)
   let sharedView = initial.source === 'hash' && initial.storedRaw !== null;
@@ -380,6 +382,15 @@ export function mountApp(root: HTMLElement, env: AppEnv = {}): AppController {
     }
   }
 
+  /**
+   * Allowed months of a month field (F1.7, F1.8): the commissioning month lies in the window of a fixed application
+   * month; otherwise the field's own range (monthBounds, relative to the check date).
+   */
+  function monthRange(path: string): [number, number] {
+    const app = tryParseMonth(inputs.heatPump.applicationMonth);
+    if (path === 'heatPump.installMonth' && app !== null) return installBounds(app);
+    return monthBounds(path, checkDate);
+  }
   function readField(el: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement): void {
     const f = fieldByPath.get(el.dataset.path!)!;
     const prev = getPath(inputs, f.path);
@@ -395,16 +406,20 @@ export function mountApp(root: HTMLElement, env: AppEnv = {}): AppController {
       valid = el.value.trim() !== '' && Number.isFinite(n) && (value as number) >= min && (value as number) <= max;
     } else if (f.type === 'month') {
       value = el.value.trim();
-      // F1.6: an impossible or incomplete month gives an empty value in the browser; it must not count as "automatic"
+      // A browser gives an empty value for an impossible or incomplete month: it must not count as "automatic" (F1.6)
       partialInput = f.path === 'heatPump.applicationMonth' && el.validity?.badInput === true;
-      valid = !partialInput && validMonth(f.path, value as string);
+      valid = !partialInput && validMonth(f.path, value as string, checkDate) && inMonthRange(value as string, monthRange(f.path));
     } else value = el.value;
-    // A partly entered month is not a month out of range: it gets its own text (F1.6)
-    let error: string | null = partialInput ? PARTIAL_MONTH_TEXT : valid ? null : fieldErrorText(f);
+    // A partly entered month gets its own text (F1.6); other failures name the allowed range (F1.7, F1.8)
+    let error: string | null = partialInput ? PARTIAL_MONTH_TEXT : valid ? null : f.type === 'month' ? monthErrorText(monthRange(f.path)) : fieldErrorText(f);
     // F1.6: the application month must not lie after the commissioning month (same month is allowed)
     if (valid && f.path === 'heatPump.applicationMonth' && value !== '' && parseMonth(value as string) > parseMonth(inputs.heatPump.installMonth)) {
       valid = false;
       error = `Der Antragsmonat darf nicht nach der Inbetriebnahme liegen.${KEEP_TEXT}`;
+    } else if (valid && f.path === 'heatPump.applicationMonth' && value !== '' && parseMonth(inputs.heatPump.installMonth) > installBounds(parseMonth(value as string))[1]) {
+      // F1.7 (AK2): a fixed application month that puts the commissioning beyond its window
+      valid = false;
+      error = `Mit diesem Antragsmonat liegt die Inbetriebnahme außerhalb des Zeitraums (bis ${fmtMonth(installBounds(parseMonth(value as string))[1])}).${KEEP_TEXT}`;
     }
     setFieldError(el, error);
     if (!valid) return;
@@ -506,9 +521,9 @@ export function mountApp(root: HTMLElement, env: AppEnv = {}): AppController {
       leaveShared();
       const issues: InputIssue[] = [];
       try {
-        inputs = mergeInputs(defaults, JSON.parse(initial.storedRaw ?? '{}'), issues);
+        inputs = mergeInputs(defaults, JSON.parse(initial.storedRaw ?? '{}'), issues, checkDate);
       } catch {
-        inputs = mergeInputs(defaults, {});
+        inputs = mergeInputs(defaults, {}, [], checkDate);
       }
       loadIssues = issues.length ? { origin: 'den gespeicherten Eingaben', issues } : null;
       checkDefaults('storage', parseJson(initial.storedRaw));
@@ -823,7 +838,7 @@ export function mountApp(root: HTMLElement, env: AppEnv = {}): AppController {
     try {
       const issues: InputIssue[] = [];
       const text = await file.text();
-      const imported = importJson(defaults, text, issues);
+      const imported = importJson(defaults, text, issues, checkDate);
       leaveShared();
       loadIssues = issues.length ? { origin: 'der Datei', issues } : null;
       newDefaults = null;
@@ -1273,6 +1288,12 @@ export function mountApp(root: HTMLElement, env: AppEnv = {}): AppController {
   }
 
   function renderInstallTable(cmp: InstallComparison): void {
+    // F7.1 (AK5): a fixed application month can leave no point in time in the window
+    if (cmp.rows.length === 0) {
+      const limit = cmp.latestInstall === null ? '' : ` Mit dem festen Antragsmonat ist eine Inbetriebnahme nur bis ${fmtMonth(cmp.latestInstall)} möglich.`;
+      $<HTMLElement>('#install-table').innerHTML = `<p id="cmp-empty" class="muted">Keine Zeitpunkte im Vergleich.${limit}</p>`;
+      return;
+    }
     $<HTMLElement>('#install-table').innerHTML = `
       <table>
         <thead><tr><th>Inbetriebnahme</th><th class="num">Zuschuss</th><th class="num">WP + KfW</th><th class="num">WP + Steuer</th><th>Bester Weg</th><th class="num">Ersparnis ggü. ohne WP</th><th class="num">Kosten des Wartens</th></tr></thead>
@@ -1490,7 +1511,7 @@ export function mountApp(root: HTMLElement, env: AppEnv = {}): AppController {
   const controller: AppController = {
     getInputs: () => inputs,
     setInputs(i) {
-      inputs = mergeInputs(defaults, i);
+      inputs = mergeInputs(defaults, i, [], checkDate);
       jazCheck = null;
       writeForm();
       recalc();
@@ -1622,7 +1643,7 @@ export function mountApp(root: HTMLElement, env: AppEnv = {}): AppController {
     if (!cur) return;
     const issues: InputIssue[] = [];
     // readable entries always pass importJson (same check: an object with version 1), see viewScenario
-    const imported = importJson(defaults, JSON.stringify(cur.view.inputs), issues);
+    const imported = importJson(defaults, JSON.stringify(cur.view.inputs), issues, checkDate);
     imported.scenario.name = name;
     leaveShared();
     loadIssues = issues.length ? { origin: 'dem gespeicherten Szenario', issues } : null;
@@ -1782,7 +1803,7 @@ export function mountApp(root: HTMLElement, env: AppEnv = {}): AppController {
     }
     const issues: InputIssue[] = [];
     // readable entries always pass importJson (same check: an object with version 1), see viewScenario
-    const imported = importJson(defaults, JSON.stringify(view.inputs), issues);
+    const imported = importJson(defaults, JSON.stringify(view.inputs), issues, checkDate);
     imported.scenario.name = view.name;
     // The limit of three variants is reported by addVariant (VARIANTS_LIMIT_TEXT)
     if (addVariant(imported, view.name)) {
@@ -1816,7 +1837,7 @@ export function mountApp(root: HTMLElement, env: AppEnv = {}): AppController {
     for (const file of [...(varFiles.files ?? [])]) {
       try {
         const issues: InputIssue[] = [];
-        const imported = importJson(defaults, await file.text(), issues);
+        const imported = importJson(defaults, await file.text(), issues, checkDate);
         if (!addVariant(imported, file.name.replace(/\.json$/i, ''))) break;
         messages.push(`„${file.name}“ geladen${issues.length ? ` (${issues.length} Wert(e) korrigiert)` : ''}.`);
       } catch (err) {
@@ -1972,7 +1993,7 @@ interface InitialLoad {
   storedRaw: string | null;
 }
 
-function loadInitial(defaults: Inputs, storage: Storage | null): InitialLoad {
+function loadInitial(defaults: Inputs, storage: Storage | null, checkDate: Date): InitialLoad {
   let storedRaw: string | null = null;
   try {
     storedRaw = storage?.getItem(STORAGE_KEY) ?? null;
@@ -1980,17 +2001,17 @@ function loadInitial(defaults: Inputs, storage: Storage | null): InitialLoad {
     /* ignorieren */
   }
   const issues: InputIssue[] = [];
-  const fromHash = typeof location !== 'undefined' ? decodeHash(defaults, location.hash, issues) : null;
+  const fromHash = typeof location !== 'undefined' ? decodeHash(defaults, location.hash, issues, checkDate) : null;
   if (fromHash) return { inputs: fromHash, source: 'hash', issues, storedRaw };
   issues.length = 0;
   if (storedRaw) {
     try {
-      return { inputs: mergeInputs(defaults, JSON.parse(storedRaw), issues), source: 'storage', issues, storedRaw };
+      return { inputs: mergeInputs(defaults, JSON.parse(storedRaw), issues, checkDate), source: 'storage', issues, storedRaw };
     } catch {
       /* ignorieren */
     }
   }
-  return { inputs: mergeInputs(defaults, {}), source: 'default', issues: [], storedRaw };
+  return { inputs: mergeInputs(defaults, {}, [], checkDate), source: 'default', issues: [], storedRaw };
 }
 
 /** JSON.parse without throwing (raw saved data for the defaults check, F22.4). */
@@ -2129,13 +2150,21 @@ export const KEEP_TEXT = ' Der bisherige Wert wird weiter verwendet.';
 /** Text for a month that is only partly entered or cannot be read (F1.5, F1.6); the old value stays. */
 export const PARTIAL_MONTH_TEXT = `Bitte den Monat vollständig eingeben oder das Feld ganz leeren.${KEEP_TEXT}`;
 
+/** Error text for a month outside its range; the range is given as absolute months (F1.7, F1.8, F9.5). */
+export function monthErrorText(range: [number, number]): string {
+  return `Bitte einen Monat zwischen ${monthRangeLabel(range)} angeben (Jahr und Monat).${KEEP_TEXT}`;
+}
+
+/** True if a month value (YYYY-MM) lies in the range; an empty value is left to the field rules. */
+export function inMonthRange(value: string, range: [number, number]): boolean {
+  if (value === '') return true;
+  const m = tryParseMonth(value);
+  return m !== null && m >= range[0] && m <= range[1];
+}
+
 /** Error text for invalid inputs (F9.5, WCAG 3.3.1). */
 export function fieldErrorText(f: Field): string {
   const keep = KEEP_TEXT;
-  if (f.type === 'month') {
-    const [from, to] = monthYears(f.path);
-    return `Bitte einen Monat zwischen ${from} und ${to} angeben (Jahr und Monat).${keep}`;
-  }
   if (f.type === 'number' || f.type === 'percent') {
     if (!(f.path in NUMBER_LIMITS)) return `Bitte eine gültige Zahl eingeben.${keep}`;
     const k = f.type === 'percent' ? 100 : 1;

@@ -1523,6 +1523,8 @@ describe('F9.5 Antragsmonat beim Laden aus dem Speicher (AK8)', () => {
   beforeEach(() => {
     store.clear();
     store.setItem(INTRO_KEY, '1');
+    // A shared link (#z=) of an earlier test would take precedence over the stored inputs
+    history.replaceState(null, '', '/');
   });
   it('AK8 eigene gespeicherte Eingaben mit leadMonths 2: fester Antragsmonat 03/2027 und Meldung beim Start', () => {
     const data = JSON.parse(JSON.stringify(defaults()));
@@ -1619,3 +1621,4 @@ describe('F1.6 Antragsmonat: vollständig leeren und unvollständige Eingabe (Br
     expect(app.getInputs().heatPump.applicationMonth).toBe('');
   });
 });
+

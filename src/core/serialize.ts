@@ -5,7 +5,7 @@ import { DEFAULTS_AS_OF } from './default-history';
 import { formatMonth, formatMonthDe, parseMonth, tryParseMonth } from './dates';
 import { AUTO_APPLICATION_LEAD_MONTHS } from './defaults';
 import { incomeRangeOfAmount } from './income-range';
-import { checkValue, cleanDocuments, TEXT_LIMITS, type InputIssue } from './validate';
+import { checkValue, cleanDocuments, heatingBounds, installBounds, TEXT_LIMITS, type InputIssue } from './validate';
 
 type Obj = Record<string, unknown>;
 
@@ -16,9 +16,28 @@ const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !
  * Only known keys with a matching type are adopted (F9.3); values are validated and
  * clamped or replaced by the default if necessary (F9.5). Findings end up in `issues`.
  */
-export function mergeInputs(defaults: Inputs, data: unknown, issues: InputIssue[] = []): Inputs {
-  const merged = mergeObj(defaults as unknown as Obj, migrate(defaults, data, issues), '', issues) as unknown as Inputs;
-  return limitApplicationMonth(merged, issues);
+export function mergeInputs(defaults: Inputs, data: unknown, issues: InputIssue[] = [], today: Date = new Date()): Inputs {
+  const merged = mergeObj(defaults as unknown as Obj, migrate(defaults, data, issues, today), '', issues, today) as unknown as Inputs;
+  return limitInstallMonth(limitApplicationMonth(merged, issues), issues);
+}
+
+/**
+ * Planned commissioning (F1.7, AK4): for a fixed application month the commissioning month must lie in its window
+ * (installBounds). Outside values are moved to the nearest month of the window, with notice. Runs after the
+ * application month was limited (F1.6), so the lower bound holds and only the upper bound can be exceeded.
+ */
+function limitInstallMonth(inputs: Inputs, issues: InputIssue[]): Inputs {
+  const app = tryParseMonth(inputs.heatPump.applicationMonth);
+  if (app === null) return inputs; // automatic: always inside the window (commissioning − 4 months)
+  const install = parseMonth(inputs.heatPump.installMonth);
+  const [first, last] = installBounds(app);
+  const clamped = Math.min(Math.max(install, first), last);
+  if (clamped === install) return inputs;
+  issues.push({
+    path: 'heatPump.installMonth',
+    reason: `liegt außerhalb des Zeitraums ${formatMonthDe(first)} bis ${formatMonthDe(last)} für den Antragsmonat, auf ${formatMonthDe(clamped)} begrenzt`,
+  });
+  return { ...inputs, heatPump: { ...inputs.heatPump, installMonth: formatMonth(clamped) } };
 }
 
 /**
@@ -48,18 +67,23 @@ function rawStart(defaults: Inputs, data: Obj): number {
  * age of the heating (years) → commissioning month (Inbetriebnahme, F34), with a notice to check the month;
  * fixed PV share (PV-Anteil) → notice, because PV is now calculated from the PV system (F28).
  */
-function migrate(defaults: Inputs, data: unknown, issues: InputIssue[]): unknown {
+function migrate(defaults: Inputs, data: unknown, issues: InputIssue[], today: Date): unknown {
   data = migrateIncomeRange(defaults, data, issues);
   if (isObj(data) && isObj(data.oldHeating)) {
     const o = data.oldHeating;
     if (typeof o.ageYears === 'number' && Number.isFinite(o.ageYears) && o.installedMonth === undefined) {
       const years = Math.min(Math.max(o.ageYears, 0), 200);
-      const installed = rawStart(defaults, data) - Math.round(years * 12);
-      const installedMonth = formatMonth(installed);
-      data = { ...data, oldHeating: { ...o, installedMonth } };
+      const unclamped = rawStart(defaults, data) - Math.round(years * 12);
+      // F1.8 (AK6): older than 40 years back from the check year → moved to the earliest allowed month, with notice
+      const [first, last] = heatingBounds(today);
+      const installed = Math.min(Math.max(unclamped, first), last);
+      data = { ...data, oldHeating: { ...o, installedMonth: formatMonth(installed) } };
       issues.push({
         path: 'oldHeating.installedMonth',
-        reason: `aus dem früheren „Alter der Heizung“ (${years.toLocaleString('de-DE')} Jahre) auf ${formatMonthDe(installed)} umgerechnet – bitte den genauen Monat der Inbetriebnahme prüfen (Typenschild, Schornsteinfeger-Protokoll)`,
+        reason:
+          installed === unclamped
+            ? `aus dem früheren „Alter der Heizung“ (${years.toLocaleString('de-DE')} Jahre) auf ${formatMonthDe(installed)} umgerechnet – bitte den genauen Monat der Inbetriebnahme prüfen (Typenschild, Schornsteinfeger-Protokoll)`
+            : `aus dem früheren „Alter der Heizung“ (${years.toLocaleString('de-DE')} Jahre) auf ${formatMonthDe(installed)} begrenzt (Zeitraum ${formatMonthDe(first)} bis ${formatMonthDe(last)}) – bitte den genauen Monat der Inbetriebnahme prüfen`,
       });
     }
   }
@@ -126,14 +150,14 @@ function migrateIncomeRange(defaults: Inputs, data: unknown, issues: InputIssue[
   return { ...data, building: { ...b, incomeRange: incomeRangeOfAmount(old) } };
 }
 
-function mergeObj(base: Obj, data: unknown, prefix: string, issues: InputIssue[]): Obj {
+function mergeObj(base: Obj, data: unknown, prefix: string, issues: InputIssue[], today: Date): Obj {
   const out: Obj = {};
   const src = isObj(data) ? data : {};
   for (const [k, def] of Object.entries(base)) {
     const path = prefix ? `${prefix}.${k}` : k;
     const v = Object.prototype.hasOwnProperty.call(src, k) ? src[k] : undefined;
     if (isObj(def)) {
-      out[k] = mergeObj(def, v, path, issues);
+      out[k] = mergeObj(def, v, path, issues, today);
       continue;
     }
     if (path === 'scenario.documents') {
@@ -150,7 +174,7 @@ function mergeObj(base: Obj, data: unknown, prefix: string, issues: InputIssue[]
       out[k] = def;
       continue;
     }
-    const r = checkValue(path, v, def);
+    const r = checkValue(path, v, def, today);
     if (r.issue) issues.push(r.issue);
     out[k] = r.value;
   }
@@ -221,7 +245,7 @@ export function encodeHash(defaults: Inputs, inputs: Inputs): string {
 }
 
 /** Reads a URL hash ("#z=…" compressed or older "#s=…" uncompressed); null for missing/invalid content. */
-export function decodeHash(defaults: Inputs, hash: string, issues: InputIssue[] = []): Inputs | null {
+export function decodeHash(defaults: Inputs, hash: string, issues: InputIssue[] = [], today: Date = new Date()): Inputs | null {
   const m = /[#&]([sz])=([A-Za-z0-9_-]+)/.exec(hash);
   if (!m) return null;
   try {
@@ -229,7 +253,7 @@ export function decodeHash(defaults: Inputs, hash: string, issues: InputIssue[] 
     if (m[1] === 's' && raw.length > MAX_LINK_JSON_BYTES) return null;
     const data = JSON.parse(new TextDecoder().decode(m[1] === 'z' ? inflateLimited(raw) : raw));
     if (!isObj(data)) return null;
-    return mergeInputs(defaults, data, issues);
+    return mergeInputs(defaults, data, issues, today);
   } catch {
     return null;
   }
@@ -276,7 +300,7 @@ export function exportJson(inputs: Inputs, defaultsAsOf: string = DEFAULTS_AS_OF
 }
 
 /** Imports a JSON file; throws on invalid content (F9.3). */
-export function importJson(defaults: Inputs, text: string, issues: InputIssue[] = []): Inputs {
+export function importJson(defaults: Inputs, text: string, issues: InputIssue[] = [], today: Date = new Date()): Inputs {
   let data: unknown;
   try {
     data = JSON.parse(text);
@@ -286,5 +310,5 @@ export function importJson(defaults: Inputs, text: string, issues: InputIssue[] 
   if (!isObj(data) || data.version !== 1) {
     throw new Error('Die Datei ist kein Datensatz dieses Rechners (version 1).');
   }
-  return mergeInputs(defaults, data, issues);
+  return mergeInputs(defaults, data, issues, today);
 }

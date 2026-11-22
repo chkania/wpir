@@ -15,6 +15,8 @@
   - Selbstnutzung ist Voraussetzung für Boni und Steuerbonus (`fields.ts`, F5.1/F5.2). Nachweis über Grundbuchauszug und Meldebestätigung (Merkblatt S. 5).
   - Hinweis zu persönlichen Angaben in Link und Datei (Haushaltseinkommen, Einkommensteuer, Haus und Heizung, Bezeichnung): Fundstelle ist F9.7 (F9-persistenz.md), nicht das Merkblatt.
   - Klimageschwindigkeitsbonus (Merkblatt S. 3; nur als Bonusbedingung): Öl-, Kohle-, Gas-Etagen- und Nachtspeicherheizung unabhängig vom Alter; Gas- und Biomasseheizung ab 20 Jahren nach Inbetriebnahme; die alte Heizung ist funktionstüchtig (`sources.ts` `funding.kgbMinGasAge`, F5.1).
+- A10 Die Dreijahresfrist für die Inbetriebnahme nach dem Antragsjahr (F1.7) ist Nutzervorgabe, nicht gegen das Merkblatt 458 geprüft. Zu prüfen: Bewilligungsfrist im Merkblatt 458 (S. 7).
+- A11 Die 40-Jahre-Grenze für die Inbetriebnahme der Heizung (F1.8) ist Annahme: Eine Bestandsheizung ist nicht älter als 40 Jahre. Ältere Angaben werden begrenzt und gemeldet.
 - A9 Nicht übernommen (F39.3): Angaben aus Ratgebern, die die Seite nicht nennt.
   - Antragsfrist 31.01.2027: weder Merkblatt noch KfW-Seite nennen sie. Belegt ist nur, dass Höchstbetrag und Klimageschwindigkeitsbonus ab 01.02.2027 sinken (steht schon im Rechner, F5.1).
   - BAFA-Listung als Pflicht: kein Beleg für KfW 458.

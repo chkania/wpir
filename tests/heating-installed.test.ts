@@ -4,7 +4,7 @@ import { decodeHash, importJson, mergeInputs } from '../src/core/serialize';
 import { runAll } from '../src/core/simulation';
 import type { Inputs } from '../src/core/types';
 import { heatingAgeNote } from '../src/ui/fields';
-import { defaults } from './helpers';
+import { defaults, TODAY } from './helpers';
 
 /** Default case: start 2026-11, installation 2027-05, application 4 months earlier = 2027-01. */
 const withInstalled = (month: string, mut?: (i: Inputs) => void): Inputs => {
@@ -38,11 +38,12 @@ describe('F34.1 Inbetriebnahme der Heizung: Mindestalter monatsgenau', () => {
     expect(heatingAgeNote(withInstalled(''))).toBe('');
   });
 
-  it('Monat vor 2000 ist gültig, vor 1900 nicht', () => {
+  it('AK9 Monat 1988 gültig, vor 40 Jahren zurück (1850) begrenzt', () => {
     const issues: { path: string; reason: string }[] = [];
-    expect(mergeInputs(defaults(), { oldHeating: { installedMonth: '1988-03' } }, issues).oldHeating.installedMonth).toBe('1988-03');
+    expect(mergeInputs(defaults(), { oldHeating: { installedMonth: '1988-03' } }, issues, TODAY).oldHeating.installedMonth).toBe('1988-03');
     expect(issues).toEqual([]);
-    expect(mergeInputs(defaults(), { oldHeating: { installedMonth: '1850-01' } }, issues).oldHeating.installedMonth).toBe('2004-11');
+    // AK9: before 40 years back from the check year (2026) → clamped to 01/1986, with a notice
+    expect(mergeInputs(defaults(), { oldHeating: { installedMonth: '1850-01' } }, issues, TODAY).oldHeating.installedMonth).toBe('1986-01');
     expect(issues).toHaveLength(1);
   });
 });
@@ -67,5 +68,16 @@ describe('F34.2 ältere Daten mit „Alter der Heizung“ werden umgerechnet', (
     const json = JSON.stringify({ oldHeating: { ageYears: 25 } });
     const i = decodeHash(defaults(), '#s=' + Buffer.from(json).toString('base64url'));
     expect(i!.oldHeating.installedMonth).toBe('2001-11');
+  });
+});
+
+describe('F1.8 Altersumrechnung über 40 Jahre (AK6)', () => {
+  it('AK6 ageYears 45 (Start 2026-11, Prüfjahr 2026): Monat auf 01/1986 begrenzt, mit Meldung', () => {
+    const issues: { path: string; reason: string }[] = [];
+    const raw = { version: 1, general: { startMonth: '2026-11' }, oldHeating: { ageYears: 45 } };
+    const i = importJson(defaults(), JSON.stringify(raw), issues, TODAY);
+    expect(i.oldHeating.installedMonth).toBe('1986-01');
+    expect(issues).toEqual([{ path: 'oldHeating.installedMonth', reason: expect.stringContaining('01/1986') }]);
+    expect(issues[0].reason).toContain('begrenzt');
   });
 });

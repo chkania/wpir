@@ -82,6 +82,13 @@ export function applicationMonthNote(i: Inputs): string {
   const auto = install - 4;
   return `automatisch: ${Math.floor(auto / 12)}-${String((auto % 12) + 1).padStart(2, '0')}`;
 }
+/** Window note of the planned commissioning (F1.7) for a fixed application month; empty for the automatic month. Inline like absMonth. */
+export function installWindowNote(i: Inputs): string {
+  const app = absMonth(i.heatPump.applicationMonth);
+  if (app === null) return '';
+  const lastYear = Math.floor(app / 12) + 3;
+  return `Zulässig bis 12/${lastYear}: höchstens drei Jahre nach dem Antragsjahr ${Math.floor(app / 12)}.`;
+}
 const hasPv = (i: Inputs) => i.heatPump.pvKwp > 0;
 const isGas = (i: Inputs) => i.oldHeating.fuel === 'gas';
 const isOil = (i: Inputs) => i.oldHeating.fuel === 'oil';
@@ -168,7 +175,7 @@ export const SECTIONS: Section[] = [
         path: 'oldHeating.installedMonth',
         label: 'Inbetriebnahme der Heizung',
         type: 'month',
-        help: 'Monat und Jahr, z. B. vom Typenschild oder aus dem Protokoll des Schornsteinfegers. Gasheizungen erhalten den Klimageschwindigkeitsbonus, wenn die Inbetriebnahme bei Antrag mindestens 20 Jahre zurückliegt.',
+        help: 'Monat und Jahr, z. B. vom Typenschild oder aus dem Protokoll des Schornsteinfegers. Zulässig sind 40 Jahre zurück bis zum laufenden Jahr. Gasheizungen erhalten den Klimageschwindigkeitsbonus, wenn die Inbetriebnahme bei Antrag mindestens 20 Jahre zurückliegt.',
         note: heatingAgeNote,
       },
       { path: 'oldHeating.remainingLifeYears', label: 'Restlebensdauer', type: 'number', unit: 'Jahre', step: 0.5, min: 0, help: 'Danach wird im Szenario ohne Wärmepumpe ein neuer Kessel gekauft.' },
@@ -201,7 +208,13 @@ export const SECTIONS: Section[] = [
     title: 'Wärmepumpe',
     open: true,
     fields: [
-      { path: 'heatPump.installMonth', label: 'Geplante Inbetriebnahme', type: 'month', help: 'Bis dahin läuft die Altanlage zu steigenden Preisen weiter.' },
+      {
+        path: 'heatPump.installMonth',
+        label: 'Geplante Inbetriebnahme',
+        type: 'month',
+        help: 'Bis dahin läuft die Altanlage zu steigenden Preisen weiter. Mit einem festen Antragsmonat höchstens drei Jahre nach dem Antragsjahr.',
+        note: installWindowNote,
+      },
       { path: 'heatPump.investment', label: 'Investition gesamt (brutto)', type: 'number', unit: '€', step: 500, min: 0, help: 'Gerät, Installation, Umfeldmaßnahmen (z. B. Heizkörper, Elektrik).' },
       { path: 'heatPump.eligibleShare', label: 'davon förderfähig', type: 'percent', unit: '%', step: 5, min: 0, max: 100 },
       { path: 'heatPump.extraCost', label: 'Nicht förderfähige Nebenkosten', type: 'number', unit: '€', step: 100, min: 0, help: 'z. B. Stilllegung des Gasanschlusses. Rückbau und Entsorgung der Altanlage inkl. Öl-/Gastank sind förderfähig.' },

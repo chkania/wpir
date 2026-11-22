@@ -150,3 +150,17 @@ describe('F1.5 Handbuch Antragsmonat (AK12)', () => {
     expect(handbook).not.toContain('| **Vorlauf Förderantrag** |');
   });
 });
+
+describe('F1.7/F1.8 Zeitraum in Handbuch und F34 (AK10)', () => {
+  it('AK10 Handbuch nennt drei Jahre nach dem Antragsjahr und 40 Jahre zurück bis zum laufenden Jahr', () => {
+    expect(handbook).toContain('drei Jahre nach dem Antragsjahr');
+    expect(handbook).toContain('40 Jahre zurück');
+    expect(handbook).not.toContain('1900 bis 2150');
+  });
+
+  it('AK10 F34.1 nennt die neuen Grenzen statt Jahr 1900–2150', () => {
+    const f34 = read('docs/anforderungen/F34-inbetriebnahme-der-bestandsheizung.md');
+    expect(f34).toContain('40 Jahre');
+    expect(f34).not.toContain('1900–2150');
+  });
+});
