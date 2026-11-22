@@ -105,7 +105,8 @@ export interface HeatPumpInputs {
   maintenance: number;
   lifeYears: number;
   installMonth: MonthString;
-  leadMonths: number;
+  /** Application month (Antragsmonat) of the KfW 458 application, JJJJ-MM; empty = automatic (F1.5). */
+  applicationMonth: string;
   /** Heat pump of EU origin (value-added bonus (Wertschöpfungs-Bonus)). */
   euOrigin: boolean;
   separateTariff: boolean;

@@ -138,3 +138,30 @@ describe('F35 Export für KI-Assistenten (Markdown)', () => {
     expect(mdTable(['x'], [['']])).toBe('| x |\n|---|\n|   |');
   });
 });
+
+describe('F1.5/F35 Antragsmonat im KI-Export (AK9, AK10)', () => {
+  it('AK9 Feld, Standard „leer“ und Herkunft stehen im Export; kein leadMonths mehr', () => {
+    const { md } = exportMd();
+    expect(md).toContain('(`heatPump.applicationMonth`');
+    expect(md).toContain('Antragsmonat');
+    expect(md).not.toContain('leadMonths');
+    expect(md).not.toContain('Vorlauf Förderantrag');
+    expect(md).toContain(DEFAULT_SOURCES['heatPump.applicationMonth'].text.replace(/\s+/g, ' ').trim());
+  });
+
+  it('AK9 JSON des Exports enthält applicationMonth', () => {
+    const { md } = exportMd((i) => (i.heatPump.applicationMonth = '2027-03'));
+    expect(jsonBlock(md)).toContain('"applicationMonth": "2027-03"');
+  });
+});
+
+describe('F35 Antragsmonat: Standard „leer“ im KI-Export (AK10)', () => {
+  it('AK10 KI-Export: leer = „leer (automatisch)“ mit Hinweis „automatisch: 2027-01“ und Herkunft; eigener Monat mit Standard „leer (automatisch)“', () => {
+    const auto = exportMd().md;
+    expect(auto).toMatch(/- \*\*Antragsmonat\*\* \(`heatPump\.applicationMonth` = `""`\): leer \(automatisch\) – Standard/);
+    expect(auto).toContain('Rechner zeigt dazu: automatisch: 2027-01');
+    expect(auto).toContain(DEFAULT_SOURCES['heatPump.applicationMonth'].text.replace(/\s+/g, ' ').trim());
+    const fixed = exportMd((i) => (i.heatPump.applicationMonth = '2027-03')).md;
+    expect(fixed).toMatch(/- \*\*Antragsmonat\*\* \(`heatPump\.applicationMonth` = `"2027-03"`\): 03\/2027 – eigener Wert\n {2}- Standardwert: leer \(automatisch\)/);
+  });
+});

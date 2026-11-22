@@ -1,8 +1,8 @@
 import { COST_PART_LABELS, compareInstallTimes, explainBest, type CostPart, type InstallComparison } from '../core/compare';
 import { keyEvents, type KeyEvent, type KeyEvents } from '../core/events';
-import { tryParseMonth } from '../core/dates';
+import { parseMonth, tryParseMonth } from '../core/dates';
 import { APP_VERSION } from '../version';
-import { createDefaults, FUNDING_SOURCE_DATE } from '../core/defaults';
+import { AUTO_APPLICATION_LEAD_MONTHS, createDefaults, FUNDING_SOURCE_DATE } from '../core/defaults';
 import { assumptionsAgeMonths, assumptionsStale } from '../core/freshness';
 import { applyNewDefaults, DEFAULTS_AS_OF, outdatedDefaults, savedDefaultsAsOf, type OutdatedDefault } from '../core/default-history';
 import { DEFAULT_SOURCES, OFFICIAL_REFS, SOURCE_KIND_LABEL } from '../core/sources';
@@ -385,6 +385,7 @@ export function mountApp(root: HTMLElement, env: AppEnv = {}): AppController {
     const prev = getPath(inputs, f.path);
     let value: unknown;
     let valid = true;
+    let partialInput = false;
     if (f.type === 'checkbox') value = (el as HTMLInputElement).checked;
     else if (f.type === 'number' || f.type === 'percent') {
       const n = Number(String(el.value).replace(',', '.'));
@@ -394,9 +395,18 @@ export function mountApp(root: HTMLElement, env: AppEnv = {}): AppController {
       valid = el.value.trim() !== '' && Number.isFinite(n) && (value as number) >= min && (value as number) <= max;
     } else if (f.type === 'month') {
       value = el.value.trim();
-      valid = validMonth(f.path, value as string);
+      // F1.6: an impossible or incomplete month gives an empty value in the browser; it must not count as "automatic"
+      partialInput = f.path === 'heatPump.applicationMonth' && el.validity?.badInput === true;
+      valid = !partialInput && validMonth(f.path, value as string);
     } else value = el.value;
-    setFieldError(el, valid ? null : fieldErrorText(f));
+    // A partly entered month is not a month out of range: it gets its own text (F1.6)
+    let error: string | null = partialInput ? PARTIAL_MONTH_TEXT : valid ? null : fieldErrorText(f);
+    // F1.6: the application month must not lie after the commissioning month (same month is allowed)
+    if (valid && f.path === 'heatPump.applicationMonth' && value !== '' && parseMonth(value as string) > parseMonth(inputs.heatPump.installMonth)) {
+      valid = false;
+      error = `Der Antragsmonat darf nicht nach der Inbetriebnahme liegen.${KEEP_TEXT}`;
+    }
+    setFieldError(el, error);
     if (!valid) return;
     const jazBefore = f.path === 'heatPump.jaz' ? null : estimateJaz(inputs);
     setPath(inputs, f.path, value);
@@ -554,6 +564,15 @@ export function mountApp(root: HTMLElement, env: AppEnv = {}): AppController {
   form.addEventListener('change', (e) => {
     const el = e.target as HTMLInputElement;
     if (el.dataset.path) readField(el);
+  });
+  // Chromium fires no input event when the last segment of a month is cleared (the value stays ""),
+  // so the application month is checked again on leaving it and on Backspace/Delete (F1.5, F1.6)
+  const isApplicationMonth = (t: EventTarget | null) => (t as HTMLElement | null)?.dataset?.path === 'heatPump.applicationMonth';
+  form.addEventListener('focusout', (e) => {
+    if (isApplicationMonth(e.target)) readField(e.target as HTMLInputElement);
+  });
+  form.addEventListener('keyup', (e) => {
+    if ((e.key === 'Backspace' || e.key === 'Delete') && isApplicationMonth(e.target)) readField(e.target as HTMLInputElement);
   });
 
   // ---------- Toolbar menus (F38, ARIA pattern "Menu Button") ----------
@@ -1271,7 +1290,7 @@ export function mountApp(root: HTMLElement, env: AppEnv = {}): AppController {
           )
           .join('')}</tbody>
       </table>
-      <p class="muted small">Referenz ohne Wärmepumpe: ${fmtEur(cmp.refTotal)}. Förderantrag jeweils ${inputs.heatPump.leadMonths} Monate vor Inbetriebnahme.</p>
+      <p class="muted small">Referenz ohne Wärmepumpe: ${fmtEur(cmp.refTotal)}. ${inputs.heatPump.applicationMonth ? `Antragsmonat ${escapeHtml(inputs.heatPump.applicationMonth)} (festgelegt, im Zeitpunktvergleich höchstens zum Einbaumonat).` : `Förderantrag automatisch ${AUTO_APPLICATION_LEAD_MONTHS} Monate vor Inbetriebnahme.`}</p>
       ${bestWhyHtml(cmp)}`;
   }
 
@@ -2104,9 +2123,15 @@ function windfallHtml(run: RunResult): string {
       .join('')}`;
 }
 
+/** Suffix of every input error: the old value stays (F9.5). */
+export const KEEP_TEXT = ' Der bisherige Wert wird weiter verwendet.';
+
+/** Text for a month that is only partly entered or cannot be read (F1.5, F1.6); the old value stays. */
+export const PARTIAL_MONTH_TEXT = `Bitte den Monat vollständig eingeben oder das Feld ganz leeren.${KEEP_TEXT}`;
+
 /** Error text for invalid inputs (F9.5, WCAG 3.3.1). */
 export function fieldErrorText(f: Field): string {
-  const keep = ' Der bisherige Wert wird weiter verwendet.';
+  const keep = KEEP_TEXT;
   if (f.type === 'month') {
     const [from, to] = monthYears(f.path);
     return `Bitte einen Monat zwischen ${from} und ${to} angeben (Jahr und Monat).${keep}`;

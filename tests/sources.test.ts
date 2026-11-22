@@ -43,3 +43,15 @@ describe('F11 Herkunft der Standardwerte', () => {
     expect(DEFAULT_SOURCES['financing.followUpRate'].kind).toBe('annahme');
   });
 });
+
+describe('F1.5 Antragsmonat Herkunft (AK11)', () => {
+  it('AK11 heatPump.applicationMonth hat eine Herkunftsangabe; heatPump.leadMonths ist entfernt', () => {
+    expect(DEFAULT_SOURCES['heatPump.applicationMonth']).toBeDefined();
+    expect(DEFAULT_SOURCES['heatPump.applicationMonth'].text).toContain('4 Monate');
+    expect(OFFICIAL_REFS['heatPump.applicationMonth']).toBeDefined();
+    expect(DEFAULT_SOURCES['heatPump.leadMonths']).toBeUndefined();
+    expect(OFFICIAL_REFS['heatPump.leadMonths']).toBeUndefined();
+    expect(paths).toContain('heatPump.applicationMonth');
+    expect(paths).not.toContain('heatPump.leadMonths');
+  });
+});

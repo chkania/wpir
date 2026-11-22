@@ -123,3 +123,35 @@ describe('N6 Content-Security-Policy im Build', () => {
     expect(out.indexOf('Content-Security-Policy')).toBeLessThan(out.indexOf('<script'));
   });
 });
+
+describe('F1.6 Antragsmonat nicht nach der Inbetriebnahme (AK4)', () => {
+  it('AK4 Antragsmonat nach Inbetriebnahme wird auf die Inbetriebnahme begrenzt, mit Meldung (Link, Speicher, Datei)', () => {
+    const issues: InputIssue[] = [];
+    const inp = mergeInputs(defaults(), { heatPump: { installMonth: '2027-05', applicationMonth: '2027-06' } }, issues);
+    expect(inp.heatPump.applicationMonth).toBe('2027-05');
+    expect(issues).toHaveLength(1);
+    expect(issues[0].path).toBe('heatPump.applicationMonth');
+    expect(issues[0].reason).toContain('Inbetriebnahme');
+  });
+
+  it('AK4 Antragsmonat gleich der Inbetriebnahme bleibt unverändert und ohne Meldung', () => {
+    const issues: InputIssue[] = [];
+    const inp = mergeInputs(defaults(), { heatPump: { installMonth: '2027-05', applicationMonth: '2027-05' } }, issues);
+    expect(inp.heatPump.applicationMonth).toBe('2027-05');
+    expect(issues).toEqual([]);
+  });
+
+  it('AK4 Format 2027-13 wird als ungültiger Monat auf den Standard (leer) gesetzt', () => {
+    const issues: InputIssue[] = [];
+    const inp = mergeInputs(defaults(), { heatPump: { applicationMonth: '2027-13' } }, issues);
+    expect(inp.heatPump.applicationMonth).toBe('');
+    expect(issues).toHaveLength(1);
+  });
+
+  it('AK4 leerer Antragsmonat ist gültig (automatisch)', () => {
+    expect(MONTH_FIELDS['heatPump.applicationMonth']).toBe(true);
+    const issues: InputIssue[] = [];
+    mergeInputs(defaults(), { heatPump: { applicationMonth: '' } }, issues);
+    expect(issues).toEqual([]);
+  });
+});

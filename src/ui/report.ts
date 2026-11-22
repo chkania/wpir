@@ -56,6 +56,8 @@ export function fieldText(f: Field, inputs: Inputs): string {
       return f.options?.find(([k]) => k === v)?.[1] ?? String(v);
     case 'month': {
       const m = tryParseMonth(String(v ?? ''));
+      // Empty application month = automatic lead time (F1.5)
+      if (m === null && f.path === 'heatPump.applicationMonth') return 'leer (automatisch)';
       return m === null ? '–' : fmtMonth(m);
     }
     case 'percent':

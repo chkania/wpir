@@ -9,7 +9,7 @@
 - A6 CO₂-Preispfad ab 2028 (EU-ETS2) ist eine Annahme.
 - A8 Grundlage der Förderaussagen der Seite „Weg zum Angebot und zur Förderung“ (F39.3). Nachgeprüft am 20.11.2026 im Merkblatt 458 (Stand 09/2026, gültig ab 24.09.2026) und auf der KfW-Produktseite 458:
   - Reihenfolge laut Merkblatt, Abschnitt „In 6 Schritten zum Zuschuss“: (1) Bestätigung zum Antrag (BzA) von Energieeffizienz-Experten oder Fachunternehmen; (2) Liefer- oder Leistungsvertrag mit aufschiebender oder auflösender Bedingung, der das voraussichtliche Umsetzungsdatum enthält; (3) Antrag in „Meine KfW“ mit BzA und Vertrag; (4) Vorhaben nach der Zusage durchführen; (5) Bestätigung nach Durchführung (BnD); (6) Auszahlung mit BnD und Rechnungen, bei Boni weitere Nachweise.
-  - Vorhabenbeginn (Merkblatt S. 6): Ein Vertrag ohne Bedingung oder der Start der Bauarbeiten gilt als Vorhabenbeginn. Beginn vor dem Antrag schließt die Förderung aus (auch in `sources.ts` `heatPump.leadMonths`, `installMonth` und `events.ts` belegt).
+  - Vorhabenbeginn (Merkblatt S. 6): Ein Vertrag ohne Bedingung oder der Start der Bauarbeiten gilt als Vorhabenbeginn. Beginn vor dem Antrag schließt die Förderung aus (auch in `sources.ts` `heatPump.applicationMonth`, `installMonth` und `events.ts` belegt).
   - Boni und Höchstbetrag richten sich nach dem Antragsdatum (Merkblatt S. 4; `sources.ts`).
   - Einkommen (Merkblatt S. 5): Durchschnitt des zu versteuernden Einkommens des 2. und 3. Jahres vor Antragseingang, nachgewiesen mit Einkommensteuerbescheiden (`fields.ts`, `events.ts`).
   - Selbstnutzung ist Voraussetzung für Boni und Steuerbonus (`fields.ts`, F5.1/F5.2). Nachweis über Grundbuchauszug und Meldebestätigung (Merkblatt S. 5).

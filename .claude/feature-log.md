@@ -74,4 +74,19 @@ Felder:
 - Nutzer: 3 Rückfragen (Anforderung), 2 Freigaben, 0 im Review.
 - Notiz: Wie bei F39 führte die Hauptsitzung Tests/Build aus; der Umsetzer konnte sie diesmal selbst ausführen. Keine Snapshot-Änderung (Kernvorgabe).
 
+## 2026-11-22 – Antragsmonat-Feld statt Vorlauf in Monaten (F1.4–F1.6)
+
+- Stufen:
+  - Anforderung (Haiku): 3 Durchgänge, ≈ 440 k, ≈ 6 min (erster Lauf nach Nutzer-Rückfragen zum Umfang)
+  - Umsetzung (Haiku): 5 Läufe inkl. Bugfix, ≈ 1,4 M, Dauer nicht verlässlich (Wartezeiten)
+  - Code-Review (Standard): 2 Durchgänge (1. OK, nur geringe Befunde; 2. Delta der Testkorrekturen OK), ≈ 75 k, ≈ 1 min
+  - QA (Standard): 2 Durchgänge (1. Mängel: Testlücken AK6/AK8, 2. Freigabe), ≈ 108 k
+- Spät gefunden:
+  - QA: AK6-Test war tautologisch, AK8 (Szenarien/Varianten) ohne Test → Umsetzung.
+  - Code-Review: JSDoc-Platzierung, Konstante für Vorlauf-Text → Umsetzung (gering).
+  - Nach Freigabe: komplett geleertes Antragsfeld zeigte Eingabefehler (Chromium setzt bei Teil-Leeren badInput, beim vollständigen Leeren kein Ereignis) → Bugfix, Chromium-Messung vor Umsetzung.
+  - Profil fehlte nach Branch-Wechsel (lag nur auf chore/sdlc-plugin) → Hauptsitzung stellte es wieder her.
+- Nutzer: 4 Rückfragen zum Umfang und Verhalten (Abstand 4, Vergleich, Migration, Vorbelegung), 2 zu Rechenweg-Format und Leerfeld-Text, 1 Freigabe Anforderung, 1 Freigabe Bugfix; Branch-Basis über fetch-Auflösung.
+- Notiz: Bash-Sperre durch rtk-Hook im Auto-Modus blockierte Tests und Commits, bis der Auto-Modus verlassen wurde. Tests und Build führte die Hauptsitzung nach Entsperrung selbst aus.
+
 Retro 2026-11-20: 4 Läufe (F37, F38, F39, F5.4). Der Anforderungs-Review fand in 4 von 4 Läufen 3 bis 15 Befunde (Quellen und Bestandsfundorte nicht geprüft), und in 4 von 4 Läufen fehlte ein von der Anforderung verlangter Test. Übernommen: V1 Fundort-Suche und Quellenprüfung im Autor, V2 Abgleich Anforderung gegen Tests und Abgrenzung im Implementer, V3 nur eine Prüfrunde im Autor. Messen bei den nächsten zwei Läufen: Tokens des Autors und Zahl der Review-Befunde; zeigt sich mehr Review-Aufwand, V3 zurücknehmen. Nutzer-Rückfragen lassen sich aus dem Laufbuch nicht als Standardannahmen ableiten (nur Anzahl, kein Inhalt) – künftig den Inhalt der Rückfragen im Laufbuch festhalten.

@@ -126,9 +126,9 @@ export const DEFAULT_SOURCES: Record<string, DefaultSource> = {
   'heatPump.jaz': { kind: 'quelle', text: 'Fraunhofer ISE, Feldtest „WP-QS im Bestand“: Außenluft-Wärmepumpen in Bestandsgebäuden erreichten im Mittel eine Jahresarbeitszahl von 3,3 (Bandbreite 2,4–4,0; Zwischenergebnis 2024). Laut Berichten zum Abschluss 2025 lag der Mittelwert bei 3,4. Höher bei niedriger Vorlauftemperatur und bei Erdwärme.', url: 'https://www.ise.fraunhofer.de/de/presse-und-medien/news/2024/waermepumpenfeldstest-zwischenergebnisse-bestaetigen-effizienten-betrieb-auch-im-altbau.html', asOf: '2024' },
   'heatPump.maintenance': mkt('co2online: Wartung einer Wärmepumpe im Einfamilienhaus 110–220 €, im Mittel 140 €. Kein Schornsteinfeger mehr nötig.', 'https://www.co2online.de/energie-sparen/heizenergie-sparen/heizkosten-sparen/heizungswartung/'),
   'heatPump.lifeYears': { kind: 'schaetzung', text: 'Schätzung der üblichen Nutzungsdauer (ca. 18–25 Jahre). Wirkt auf den Restwert am Ende.' },
-  'heatPump.leadMonths': {
+  'heatPump.applicationMonth': {
     kind: 'annahme',
-    text: 'Annahme: Antrag ca. 4 Monate vor Inbetriebnahme. Der Antrag muss vor Vorhabenbeginn gestellt werden; das Antragsdatum bestimmt Boni und Höchstbeträge.',
+    text: 'Standard: leer – automatisch ca. 4 Monate vor Inbetriebnahme (Annahme, ohne amtliche Angabe). Der Antrag muss vor Vorhabenbeginn gestellt werden; das Antragsdatum bestimmt Boni und Höchstbeträge. Den Monat eintragen, sobald der Antrag feststeht.',
     url: KFW_458,
   },
   'heatPump.euOrigin': { kind: 'beispiel', text: 'Annahme: Wärmepumpe aus der EU. Ohne EU-Ursprung gibt es ab dem 1. Quartal 2027 nur 15 % Grundförderung (kein Wertschöpfungs-Bonus). Herkunft beim Angebot erfragen.' },
@@ -305,7 +305,7 @@ export const OFFICIAL_REFS: Record<string, OfficialRef[]> = {
   'heatPump.eligibleShare': [info('4 und 4.2.8 „Demontagearbeiten“'), info('8 „Umfeldmaßnahmen“'), info('9 „Nicht förderfähige Maßnahmen“')],
   'heatPump.extraCost': [info('4.2.8 „Demontagearbeiten“'), info('9 „Nicht förderfähige Maßnahmen“')],
   'heatPump.installMonth': [m458('S. 6 „Antragstellung“, „Vorhabenbeginn“')],
-  'heatPump.leadMonths': [m458('S. 3 „In 6 Schritten zum Zuschuss“, S. 6 „Vorhabenbeginn“')],
+  'heatPump.applicationMonth': [m458('S. 3 „In 6 Schritten zum Zuschuss“, S. 6 „Vorhabenbeginn“')],
   'heatPump.euOrigin': [rl('8.4.1 c, 8.4.6'), info('1.8 „Förderung von Wärmepumpen mit lokaler Wertschöpfung“')],
   'heatPump.meterSetupCost': [info('4.1.3 (notwendige Netzanschlüsse, intelligentes Messsystem)'), info('4.1.3.2 „iMSys-Bestellpflicht“')],
   'heatPump.smartMeterFee': [law('§ 30 MsbG (Preisobergrenzen)', 'https://www.gesetze-im-internet.de/messbg/__30.html'), info('4.1.3.2 „iMSys-Bestellpflicht“')],

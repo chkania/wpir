@@ -116,17 +116,46 @@ describe('F4 Wärmepumpe (KfW-Weg)', () => {
     expect(r.months[idx - 1].fixed).toBeCloseTo(15, 6); // Gas standing charge (Grundpreis) 180/12
   });
 
-  it('F1.4 Förderkonditionen nach Antragsmonat (Vorlauf)', () => {
+  it('AK2 F1.5 Antragsmonat leer: Inbetriebnahme 2027-05 minus 4 Monate = 2027-01, Klimageschwindigkeitsbonus 16 %', () => {
     const r = simulate(wp((i) => (i.heatPump.installMonth = '2027-05')), 'kfw');
-    expect(r.kfw!.kgbRate).toBe(0.16); // Application 2027-01
-    const r2 = simulate(
+    expect(r.kfw!.appMonth).toBe(parseMonth('2027-01'));
+    expect(r.kfw!.kgbRate).toBe(0.16);
+  });
+
+  it('AK3 F1.4 fester Antragsmonat 2027-03 bei Inbetriebnahme 2027-05 ergibt 12 %', () => {
+    const r = simulate(
       wp((i) => {
         i.heatPump.installMonth = '2027-05';
-        i.heatPump.leadMonths = 2;
+        i.heatPump.applicationMonth = '2027-03';
       }),
       'kfw',
     );
-    expect(r2.kfw!.kgbRate).toBe(0.12); // Application 2027-03
+    expect(r.kfw!.appMonth).toBe(parseMonth('2027-03'));
+    expect(r.kfw!.kgbRate).toBe(0.12);
+  });
+
+  it('AK4 F1.6 Antragsmonat gleich dem Inbetriebnahmemonat ist gültig (kein Hinweis)', () => {
+    const r = simulate(
+      wp((i) => {
+        i.heatPump.installMonth = '2027-05';
+        i.heatPump.applicationMonth = '2027-05';
+      }),
+      'kfw',
+    );
+    expect(r.kfw!.appMonth).toBe(parseMonth('2027-05'));
+    expect(r.warnings.some((w) => w.includes('Antragsmonat'))).toBe(false);
+  });
+
+  it('AK6 F7.1 fester Antrag 2027-03 rutscht bei Einbau 2027-02 auf 2027-02, mit Hinweis', () => {
+    const r = simulate(
+      wp((i) => {
+        i.heatPump.installMonth = '2027-02';
+        i.heatPump.applicationMonth = '2027-03';
+      }),
+      'kfw',
+    );
+    expect(r.kfw!.appMonth).toBe(parseMonth('2027-02'));
+    expect(r.warnings.some((w) => w.includes('Antragsmonat') && w.includes('02/2027'))).toBe(true);
   });
 
   it('F4.4 Altanlage fällt vor Installation aus → Ersatzkessel + Warnung', () => {

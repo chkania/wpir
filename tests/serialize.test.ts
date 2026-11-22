@@ -1,5 +1,9 @@
 import { deflateSync } from 'fflate';
+import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { parseMonth } from '../src/core/dates';
+import { runAll } from '../src/core/simulation';
+import type { InputIssue } from '../src/core/validate';
 import { cleanScenarioName, decodeHash, diffInputs, encodeHash, exportFileName, exportJson, fileSlug, importJson, mergeInputs } from '../src/core/serialize';
 import { defaults } from './helpers';
 
@@ -124,5 +128,108 @@ describe('F37 Gespeicherte Szenarien – Bezeichnung', () => {
   it('F37.2 exportJson übernimmt den Stand der Standardwerte, wenn er angegeben wird', () => {
     expect(JSON.parse(exportJson(defaults(), '2026-11-17')).defaultsAsOf).toBe('2026-11-17');
     expect(JSON.parse(exportJson(defaults())).defaultsAsOf).toBe('2026-11-18');
+  });
+});
+
+const oldLink = (data: unknown) => '#s=' + Buffer.from(JSON.stringify(data)).toString('base64url');
+
+describe('F1.5/F9.5 Antragsmonat: Migration und Prüfung (AK7, AK8, AK9)', () => {
+  it('AK7 Link mit leadMonths 4 oder ohne Feld: leerer Antragsmonat, ohne Meldung', () => {
+    const d = defaults();
+    const issues4: InputIssue[] = [];
+    expect(decodeHash(d, oldLink({ heatPump: { leadMonths: 4 } }), issues4)!.heatPump.applicationMonth).toBe('');
+    expect(issues4).toEqual([]);
+    const issuesNone: InputIssue[] = [];
+    expect(decodeHash(d, oldLink({ heatPump: { jaz: 3.5 } }), issuesNone)!.heatPump.applicationMonth).toBe('');
+    expect(issuesNone).toEqual([]);
+  });
+
+  it('AK7 Link mit leadMonths 2 und Inbetriebnahme 2027-05: fester Antrag 2027-03, mit Meldung, Rechnung wie bisher', () => {
+    const d = defaults();
+    const issues: InputIssue[] = [];
+    const inp = decodeHash(d, oldLink({ heatPump: { installMonth: '2027-05', leadMonths: 2 } }), issues)!;
+    expect(inp.heatPump.applicationMonth).toBe('2027-03');
+    expect(issues.map((x) => x.path)).toEqual(['heatPump.applicationMonth']);
+    expect(issues[0].reason).toContain('03/2027');
+    expect(runAll(inp).kfw!.kfw!.appMonth).toBe(parseMonth('2027-03'));
+  });
+
+  it('AK7 leadMonths außerhalb der Grenzen wird geklemmt, wie bisher (0 … 120)', () => {
+    const d = defaults();
+    const issues: InputIssue[] = [];
+    const inp = mergeInputs(d, { heatPump: { installMonth: '2027-05', leadMonths: 500 } }, issues);
+    expect(inp.heatPump.applicationMonth).toBe('2017-05');
+    expect(issues).toHaveLength(1);
+  });
+
+  it('AK7 leadMonths 0: fester Antrag im Einbaumonat, gemeldet', () => {
+    const issues: InputIssue[] = [];
+    const inp = mergeInputs(defaults(), { heatPump: { installMonth: '2027-05', leadMonths: 0 } }, issues);
+    expect(inp.heatPump.applicationMonth).toBe('2027-05');
+    expect(issues).toHaveLength(1);
+  });
+
+  it('AK7 Vorlauf ohne Inbetriebnahme im Datensatz: Umrechnung mit dem Standard-Einbaumonat (2027-05 – 2 = 2027-03)', () => {
+    const issues: InputIssue[] = [];
+    const inp = mergeInputs(defaults(), { heatPump: { leadMonths: 2 } }, issues);
+    expect(inp.heatPump.applicationMonth).toBe('2027-03');
+    expect(issues).toHaveLength(1);
+  });
+
+  it('AK7 Vorlauf, der keine Zahl ist: Standardwert (leer) mit Meldung', () => {
+    const issues: InputIssue[] = [];
+    const inp = mergeInputs(defaults(), { heatPump: { leadMonths: 'vier' } }, issues);
+    expect(inp.heatPump.applicationMonth).toBe('');
+    expect(issues.map((x) => x.path)).toEqual(['heatPump.applicationMonth']);
+  });
+
+  it('AK7 vorhandener applicationMonth hat Vorrang vor leadMonths', () => {
+    const issues: InputIssue[] = [];
+    const inp = mergeInputs(defaults(), { heatPump: { installMonth: '2027-05', leadMonths: 2, applicationMonth: '2027-02' } }, issues);
+    expect(inp.heatPump.applicationMonth).toBe('2027-02');
+    expect(issues).toEqual([]);
+  });
+
+  it('AK8 alte Beispieldateien (leadMonths statt applicationMonth) laden ohne Fehler; Version bleibt 1', () => {
+    const dir = new URL('../beispiele/', import.meta.url);
+    const files = readdirSync(dir).filter((f) => f.endsWith('.json'));
+    expect(files.length).toBeGreaterThanOrEqual(5);
+    for (const f of files) {
+      const data = JSON.parse(readFileSync(new URL(f, dir), 'utf8'));
+      delete data.heatPump.applicationMonth;
+      data.heatPump.leadMonths = 4;
+      const issues: InputIssue[] = [];
+      const inp = importJson(defaults(), JSON.stringify(data), issues);
+      expect(inp.version).toBe(1);
+      expect(inp.heatPump.applicationMonth).toBe('');
+      expect(issues.filter((x) => x.path.startsWith('heatPump.applicationMonth'))).toEqual([]);
+    }
+  });
+
+  it('AK8 Beispieldateien im aktuellen Format laden ohne Meldung zum Antragsmonat', () => {
+    const dir = new URL('../beispiele/', import.meta.url);
+    for (const f of readdirSync(dir).filter((x) => x.endsWith('.json'))) {
+      const issues: InputIssue[] = [];
+      importJson(defaults(), readFileSync(new URL(f, dir), 'utf8'), issues);
+      expect(issues.filter((x) => x.path.startsWith('heatPump.applicationMonth'))).toEqual([]);
+    }
+  });
+
+  it('AK8 Import: alter Vorlauf 4 bleibt Standard, Datei mit Version 1 wird nicht abgelehnt', () => {
+    const data = { version: 1, heatPump: { leadMonths: 4 } };
+    expect(importJson(defaults(), JSON.stringify(data)).heatPump.applicationMonth).toBe('');
+  });
+
+  it('AK9 Export enthält applicationMonth, nicht leadMonths; Export, Import und Link ergeben dieselben Eingaben', () => {
+    const i = defaults();
+    i.heatPump.installMonth = '2027-05';
+    i.heatPump.applicationMonth = '2027-03';
+    const json = exportJson(i);
+    expect(json).toContain('"applicationMonth": "2027-03"');
+    expect(json).not.toContain('leadMonths');
+    expect(importJson(defaults(), json)).toEqual(i);
+    expect(decodeHash(defaults(), encodeHash(defaults(), i))).toEqual(i);
+    const auto = defaults();
+    expect(importJson(defaults(), exportJson(auto))).toEqual(auto);
   });
 });

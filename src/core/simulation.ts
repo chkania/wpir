@@ -1,4 +1,4 @@
-import { DHW_PROFILE, SPACE_PROFILE } from './defaults';
+import { AUTO_APPLICATION_LEAD_MONTHS, DHW_PROFILE, SPACE_PROFILE } from './defaults';
 import { formatMonthDe, monthOf, parseMonth, tryParseMonth, yearOf } from './dates';
 import { incomeRangeValue } from './income-range';
 import { kfwLoanVariant, kfwSubsidy } from './funding';
@@ -135,6 +135,18 @@ export function createSimContext(inp: Inputs): SimContext {
     pvModel: createPvModel(inp),
     split: energySplit(inp),
   };
+}
+
+/**
+ * Application month (Antragsmonat, absolute) of the KfW 458 application (F1.4, F1.5, F7.1). An empty entry is
+ * automatic: AUTO_APPLICATION_LEAD_MONTHS before the commissioning month, so it moves with it. A fixed month
+ * cannot lie after the commissioning month (F1.6): it is then moved to that month and `movedFrom` holds the entered one.
+ */
+export function applicationMonthOf(inp: Inputs, install: number): { month: number; movedFrom: number | null } {
+  const fixed = tryParseMonth(inp.heatPump.applicationMonth);
+  if (fixed === null) return { month: install - AUTO_APPLICATION_LEAD_MONTHS, movedFrom: null };
+  if (fixed > install) return { month: install, movedFrom: fixed };
+  return { month: fixed, movedFrom: null };
 }
 
 /**
@@ -410,7 +422,13 @@ export function simulate(inp: Inputs, kind: ScenarioKind, installOverride?: numb
     };
 
     if (kind === 'kfw') {
-      const appMonth = install - inp.heatPump.leadMonths;
+      const app = applicationMonthOf(inp, install);
+      const appMonth = app.month;
+      if (app.movedFrom !== null) {
+        warnings.push(
+          `Der Antragsmonat ${formatMonthDe(app.movedFrom)} liegt nach dem Einbaumonat ${formatMonthDe(install)} – gerechnet wird mit einem Antrag im Einbaumonat.`,
+        );
+      }
       const lastRepl = replacements.filter((b) => b <= appMonth).pop();
       const oldAge =
         (appMonth - (lastRepl ?? parseMonth(o.installedMonth))) / 12;
