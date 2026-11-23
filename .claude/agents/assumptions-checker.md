@@ -16,12 +16,16 @@ Du prüfst, ob die Förder- und Rechtswerte im Rechner noch mit der Wissensbasis
    - Status `sekundaerquelle` oder `annahme` ist schwächer als `bestaetigt`: nenne ihn mit.
    - Liegt das Prüfdatum des Fakts mehr als 6 Monate zurück, weise darauf hin: Der Server selbst kann veraltet sein.
    - Beide Seiten können veraltet sein; entscheide nicht, welche stimmt, sondern verweise auf die Quelle.
-5. **Lücken:** Nenne Felder in `src/core/sources.ts` mit Art „Offizielle Quelle“ oder „Gesetz / Regelung“, für die der Server keinen Feldpfad kennt (nicht abgedeckt). Nur als Hinweis, kein Mangel.
+   - Enthält `note` oder `validUntil` ein offenes Verfahren oder Ablaufdatum, nenne den Wortlaut wörtlich.
+5. **Fakten ohne Feldpfad:** Rufe `get_facts` ohne Filter einmal ab. Fakten mit leerem `refs` werden von `check_value` nie erfasst. Für jeden davon das im Text (`summary`, `note`) genannte Rechnerfeld mit dem Wert aus `createDefaults` von Hand vergleichen. Ergebnis je Fakt: passt, weicht ab (mit Referenz), oder nicht vergleichbar (mit Grund).
+6. **Lücken:** Nenne Felder in `src/core/sources.ts` mit Art „Offizielle Quelle“ oder „Gesetz / Regelung“, für die der Server weder einen Feldpfad noch einen Fakt kennt (nicht abgedeckt). Nur als Hinweis, kein Mangel.
+7. **Zählung:** Die Anzahl der geprüften Pfade muss der Länge von `list_keys` entsprechen. Weicht sie ab, nenne die Differenz namentlich.
 
 ## Rückgabe
 
 Höchstens 40 Zeilen, Deutsch:
 1. Eine Zeile: Anzahl geprüft / gleich / abweichend / nicht prüfbar.
 2. **Abweichungen** als Tabelle: Feldpfad, Wert im Rechner, Referenzwert, Status, Prüfdatum des Fakts, Quelle (URL).
-3. **Hinweise:** schwache Status, alte Prüfdaten, nicht prüfbare Werte, nicht abgedeckte Felder.
-4. Bei Abweichungen: Hinweis, dass der Wert erst nach Prüfung der Quelle in `defaults.ts` und `sources.ts` geändert wird (Pflegeregeln in `CLAUDE.md`, `FUNDING_SOURCE_DATE` nach der Prüfung setzen).
+3. **Von Hand verglichen:** Fakten ohne Feldpfad mit Ergebnis je Fakt (siehe Schritt 5).
+4. **Hinweise:** schwache Status, alte Prüfdaten, offene Verfahren und Ablaufdaten (wörtlich), nicht prüfbare Werte, nicht abgedeckte Felder.
+5. Bei Abweichungen: Hinweis, dass der Wert erst nach Prüfung der Quelle in `defaults.ts` und `sources.ts` geändert wird (Pflegeregeln in `CLAUDE.md`, `FUNDING_SOURCE_DATE` nach der Prüfung setzen).
