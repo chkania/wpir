@@ -78,10 +78,19 @@ describe('F1.7/F1.8 Zeitraum im Formular (AK1, AK2, AK3, AK9)', () => {
     expect(errOf(root, 'heatPump.installMonth')).not.toBe('');
   });
 
-  it('AK3 Heizung im Formular (Prüfjahr 2026): 1986-01 gültig, 1985-12 abgewiesen mit Zeitraum 1986 und 2026', () => {
+  it('AK3 Heizung im Formular (Prüfmonat 2026-11): 2026-11 gültig, 2026-12 abgewiesen mit Zeitraum 01/1986 und 11/2026', () => {
+    const { root: r0, app: a0 } = mount();
+    setValue(r0, 'oldHeating.installedMonth', '2026-12');
+    expect(errOf(r0, 'oldHeating.installedMonth')).toContain('Bitte einen Monat zwischen 01/1986 und 11/2026 angeben');
+    expect(a0.getInputs().oldHeating.installedMonth).toBe('2004-11');
+    setValue(r0, 'oldHeating.installedMonth', '2026-11');
+    expect(errOf(r0, 'oldHeating.installedMonth')).toBe('');
+  });
+
+  it('AK3 Heizung im Formular (Prüfjahr 2026): 1986-01 gültig, 1985-12 abgewiesen mit Zeitraum 01/1986 und 11/2026', () => {
     const { root, app } = mount();
     setValue(root, 'oldHeating.installedMonth', '1985-12');
-    expect(errOf(root, 'oldHeating.installedMonth')).toContain('Bitte einen Monat zwischen 1986 und 2026 angeben');
+    expect(errOf(root, 'oldHeating.installedMonth')).toContain('Bitte einen Monat zwischen 01/1986 und 11/2026 angeben');
     expect(app.getInputs().oldHeating.installedMonth).toBe('2004-11');
     setValue(root, 'oldHeating.installedMonth', '1986-01');
     expect(errOf(root, 'oldHeating.installedMonth')).toBe('');
