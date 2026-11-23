@@ -46,7 +46,7 @@ PolyForm Noncommercial 1.0.0 (`LICENSE.md`). Neue/aktualisierte Laufzeit-Abhäng
 - `.github/workflows/dependabot.yml` – prüft Dependabot-PRs ohne Schreibrechte, committet aktualisierte `THIRD-PARTY-NOTICES.md` und merged Patch/Minor automatisch (Squash); Major bleibt zur manuellen Prüfung offen. Abhängigkeits-Updates erhöhen die App-Version nicht.
 
 ## Befehle
-- `/feature <Beschreibung>` – Agentenkette Anforderung → Review → Implementierung → Code-Review → QA (`.claude/skills/feature`, Agenten in `.claude/agents/`, Prüfliste `.claude/requirements-checklist.md`); `/feature-retro` – Auswertung des Laufbuchs `.claude/feature-log.md`, Verbesserungsvorschläge für die Kette
+- `/chk-sdlc:feature <Beschreibung>` – Agentenkette Anforderung → Review → Implementierung → Code-Review → QA (Plugin `chk-sdlc`, Profil `.claude/feature-profile.md`, Prüfliste `.claude/requirements-checklist.md`); `/chk-sdlc:retro` – Auswertung des Laufbuchs `.claude/feature-log.md`, Verbesserungsvorschläge für die Kette
 - `npm run check:mcp [-- <url>]` – Verbindung und Vertrag mit dem MCP-Server `wpir-mcp` (F22.5, `.mcp.json`); `/annahmen-mcp` prüft die Förder- und Rechtswerte damit (Agent `assumptions-checker`)
 - `npm run smoke [-- <url>]` – Smoketest gegen die Live-Seite oder die lokale Vorschau (N15)
 - `npm run dev` – Entwicklungsserver (Port 5173, siehe `.claude/launch.json`)
