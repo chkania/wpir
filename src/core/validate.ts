@@ -125,10 +125,13 @@ export function monthBounds(path: string, today: Date): [number, number] {
   return [MONTH_YEARS[0] * 12, MONTH_YEARS[1] * 12 + 11];
 }
 
-/** Commissioning of the heating (F1.8): from January 40 years back to December of the check year. */
+/**
+ * Commissioning of the heating (F1.8): from January 40 years back to the check month (inclusive). A heating
+ * cannot have been commissioned in a later month than the one the check is made in (Nutzerentscheidung).
+ */
 export function heatingBounds(today: Date): [number, number] {
   const y = today.getFullYear();
-  return [(y - HEATING_MAX_AGE_YEARS) * 12, y * 12 + 11];
+  return [(y - HEATING_MAX_AGE_YEARS) * 12, y * 12 + today.getMonth()];
 }
 
 /**

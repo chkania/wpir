@@ -23,12 +23,13 @@ describe('F1.7 Zeitraum der geplanten Inbetriebnahme (AK3, AK4)', () => {
     expect(late.issues).toEqual([expect.objectContaining({ path: 'heatPump.installMonth' })]);
   });
 
-  it('AK3 Heizung bei Prüfjahr 2026: 1986 gültig, 1985 wird auf 1986-01 begrenzt, 2026-12 gültig, 2027-01 auf 2026-12', () => {
+  it('AK3 Heizung bei Prüfmonat 2026-11: 1986-01 gültig, 1985-12 wird auf 1986-01 begrenzt, 2026-11 gültig, 2026-12 und 2027-01 auf 2026-11', () => {
     const at = (m: string) => mergeInputs(helperDefaults(), { oldHeating: { installedMonth: m } }, [], TODAY).oldHeating.installedMonth;
     expect(at('1986-01')).toBe('1986-01');
     expect(at('1985-12')).toBe('1986-01');
-    expect(at('2026-12')).toBe('2026-12');
-    expect(at('2027-01')).toBe('2026-12');
+    expect(at('2026-11')).toBe('2026-11');
+    expect(at('2026-12')).toBe('2026-11');
+    expect(at('2027-01')).toBe('2026-11');
   });
 
   it('AK3 Form-Grenzen gelten für validMonth: 2030-12 gültig, 2031-01 nicht (fester Antrag 2027-03)', () => {
@@ -66,26 +67,27 @@ describe('F1.7 Zeitraum der geplanten Inbetriebnahme (AK3, AK4)', () => {
 });
 
 describe('F1.8 Prüfzeitpunkt als Parameter (AK7)', () => {
-  it('AK7 Prüfjahr 2026: 1986 gültig, 1985 ungültig, 2026-12 gültig, 2027-01 ungültig', () => {
+  it('AK7 Prüfmonat 2026-11: 1986 gültig, 1985 ungültig, 2026-11 gültig, 2026-12 ungültig, 2027-01 ungültig', () => {
     expect(validMonth('oldHeating.installedMonth', '1986-01', TODAY)).toBe(true);
     expect(validMonth('oldHeating.installedMonth', '1985-12', TODAY)).toBe(false);
-    expect(validMonth('oldHeating.installedMonth', '2026-12', TODAY)).toBe(true);
+    expect(validMonth('oldHeating.installedMonth', '2026-11', TODAY)).toBe(true);
+    expect(validMonth('oldHeating.installedMonth', '2026-12', TODAY)).toBe(false);
     expect(validMonth('oldHeating.installedMonth', '2027-01', TODAY)).toBe(false);
   });
 
-  it('AK7 Prüfjahr 2030 (anderer Prüfzeitpunkt): 1990 gültig, 1989 ungültig, 2030-12 gültig, 2031-01 ungültig', () => {
-    expect(heatingBounds(year2030)).toEqual([parseMonth('1990-01'), parseMonth('2030-12')]);
+  it('AK7 Prüfmonat 2030-06 (anderer Prüfzeitpunkt): 1990-01 gültig, 1989-12 ungültig, 2030-06 gültig, 2030-07 ungültig', () => {
+    expect(heatingBounds(year2030)).toEqual([parseMonth('1990-01'), parseMonth('2030-06')]);
     expect(validMonth('oldHeating.installedMonth', '1990-01', year2030)).toBe(true);
     expect(validMonth('oldHeating.installedMonth', '1989-12', year2030)).toBe(false);
-    expect(validMonth('oldHeating.installedMonth', '2030-12', year2030)).toBe(true);
-    expect(validMonth('oldHeating.installedMonth', '2031-01', year2030)).toBe(false);
+    expect(validMonth('oldHeating.installedMonth', '2030-06', year2030)).toBe(true);
+    expect(validMonth('oldHeating.installedMonth', '2030-07', year2030)).toBe(false);
   });
 
-  it('AK7 derselbe Wert gilt je Prüfzeitpunkt unterschiedlich (1989-06: 2026 gültig, 2030 ungültig)', () => {
+  it('AK7 derselbe Wert gilt je Prüfmonat unterschiedlich (1989-06 gültig 2026-11, 2030-06 nicht vor 2030-06)', () => {
     expect(validMonth('oldHeating.installedMonth', '1989-06', TODAY)).toBe(true);
-    expect(validMonth('oldHeating.installedMonth', '1989-06', year2030)).toBe(false);
-    expect(validMonth('oldHeating.installedMonth', '1990-06', year2030)).toBe(true);
-    expect(validMonth('oldHeating.installedMonth', '1986-06', TODAY)).toBe(true);
+    expect(validMonth('oldHeating.installedMonth', '2029-06', TODAY)).toBe(false);
+    expect(validMonth('oldHeating.installedMonth', '2029-06', year2030)).toBe(true);
+    expect(validMonth('oldHeating.installedMonth', '2030-07', year2030)).toBe(false);
   });
 
   it('AK7 ohne Prüfzeitpunkt-Argument gilt das heutige Jahr (Standard)', () => {

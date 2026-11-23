@@ -175,7 +175,7 @@ export const SECTIONS: Section[] = [
         path: 'oldHeating.installedMonth',
         label: 'Inbetriebnahme der Heizung',
         type: 'month',
-        help: 'Monat und Jahr, z. B. vom Typenschild oder aus dem Protokoll des Schornsteinfegers. Zulässig sind 40 Jahre zurück bis zum laufenden Jahr. Gasheizungen erhalten den Klimageschwindigkeitsbonus, wenn die Inbetriebnahme bei Antrag mindestens 20 Jahre zurückliegt.',
+        help: 'Monat und Jahr, z. B. vom Typenschild oder aus dem Protokoll des Schornsteinfegers. Zulässig sind 40 Jahre zurück bis zum aktuellen Monat. Gasheizungen erhalten den Klimageschwindigkeitsbonus, wenn die Inbetriebnahme bei Antrag mindestens 20 Jahre zurückliegt.',
         note: heatingAgeNote,
       },
       { path: 'oldHeating.remainingLifeYears', label: 'Restlebensdauer', type: 'number', unit: 'Jahre', step: 0.5, min: 0, help: 'Danach wird im Szenario ohne Wärmepumpe ein neuer Kessel gekauft.' },
