@@ -8,6 +8,16 @@ Das Werkzeug **schreibt nur einen Bericht**. Werte änderst du weiterhin von Han
 
 Ohne API-Schlüssel: Förder- und Rechtswerte lassen sich in Claude Code gegen die Wissensbasis des MCP-Servers `wpir-mcp` prüfen (F22.5, eigenes Repo [chkania/wpir-mcp](https://github.com/chkania/wpir-mcp)). `/annahmen-mcp` startet den Agenten `assumptions-checker`, der die Standardwerte mit `check_value` vergleicht und nur berichtet. `npm run check:mcp` prüft vorab, dass der Server erreichbar ist und seine Feldpfade zum Rechner passen. Der Server enthält Regeln mit Quelle und Prüfdatum, keine Marktpreise; die bleiben bei `verify:assumptions`.
 
+### Wünsche an den MCP-Server
+
+Der Server `wpir-mcp` liegt in einem eigenen Repo. Diese Punkte sind dort offen und müssen dort umgesetzt werden:
+
+- **Neue Schlüssel mit Referenzwert:** `financing.kfwTermYears` (4–35 Jahre), `financing.kfwGraceYears` (1–5), `financing.kfwFixYears` (10 bei Laufzeit ab 6 Jahren).
+- **Prüfbare Werte für Fakten ohne Feldpfad:** `prices.co2Path` (Korridor je Jahr) und `heatPump.para14aReduction` (Bereich als Min/Max), damit `check_value` sie vergleicht.
+- **Neue Fakten:** UBA-Strommix (`prices.gridCo2Path`), BAFA-CO₂-Faktoren (`prices.gasCo2Factor`, `prices.oilCo2Factor`), Fraunhofer-JAZ (`heatPump.jaz`), Bewilligungsfrist KfW 458 (Annahme A10 zur Dreijahresregel F1.7).
+
+Jeweils mit Quelle, soweit sie in `src/core/sources.ts` schon steht.
+
 ## Was geprüft wird
 
 Das Werkzeug prüft dieselben Werte wie die Checkliste. Dazu gehört jedes Eingabefeld, dessen Standardwert in `src/core/sources.ts` als „Offizielle Quelle“, „Gesetz / Regelung“ oder „Marktdaten“ eingetragen ist und einen Link hat. Neue Felder mit Quelle kommen also automatisch dazu.
