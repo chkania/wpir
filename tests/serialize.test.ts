@@ -159,7 +159,9 @@ describe('F1.5/F9.5 Antragsmonat: Migration und Prüfung (AK7, AK8, AK9)', () =>
     const issues: InputIssue[] = [];
     const inp = mergeInputs(d, { heatPump: { installMonth: '2027-05', leadMonths: 500 } }, issues);
     expect(inp.heatPump.applicationMonth).toBe('2017-05');
-    expect(issues).toHaveLength(1);
+    // F1.7: the commissioning month lies beyond the window of 05/2017 (up to 12/2020) and is limited to it, with notice
+    expect(inp.heatPump.installMonth).toBe('2020-12');
+    expect(issues).toHaveLength(2);
   });
 
   it('AK7 leadMonths 0: fester Antrag im Einbaumonat, gemeldet', () => {

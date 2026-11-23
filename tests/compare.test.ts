@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { compareInstallTimes, explainBest, heatShareBetween } from '../src/core/compare';
-import { formatMonth } from '../src/core/dates';
+import { formatMonth, parseMonth } from '../src/core/dates';
 import { defaults } from './helpers';
 
 describe('F7 Vergleich der Installationszeitpunkte', () => {
@@ -123,5 +123,31 @@ describe('F1.5/F7.1 Antragsmonat im Zeitpunktvergleich (AK5, AK6)', () => {
     sameMonth.heatPump.applicationMonth = '2026-11';
     const atInstall = compareInstallTimes(sameMonth).rows.find((r) => formatMonth(r.installMonth) === '2026-11')!;
     expect(early.kgbRate).toBe(atInstall.kgbRate);
+  });
+});
+
+describe('F7.1 Zeitraum der Inbetriebnahme im Vergleich (AK5)', () => {
+  it('AK5 fester Antragsmonat 03/2027: Zeitpunkte nach 12/2030 entfallen, letzter Zeitpunkt 2030-11', () => {
+    const inp = defaults();
+    inp.heatPump.applicationMonth = '2027-03';
+    const c = compareInstallTimes(inp);
+    const months = c.rows.map((r) => formatMonth(r.installMonth));
+    expect(months[months.length - 1]).toBe('2030-11');
+    expect(months).not.toContain('2031-05');
+    expect(c.latestInstall).toBe(parseMonth('2030-12'));
+  });
+
+  it('AK5 ohne festen Antragsmonat bleibt der Zeitraum unbegrenzt (latestInstall null)', () => {
+    const c = compareInstallTimes(defaults());
+    expect(c.rows).toHaveLength(9);
+    expect(c.latestInstall).toBeNull();
+  });
+
+  it('AK5 keine Zeile übrig: leere Liste und Grenze gemeldet', () => {
+    const inp = defaults();
+    inp.heatPump.applicationMonth = '2022-06';
+    const c = compareInstallTimes(inp);
+    expect(c.rows).toEqual([]);
+    expect(c.latestInstall).toBe(parseMonth('2025-12'));
   });
 });

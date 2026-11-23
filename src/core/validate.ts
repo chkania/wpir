@@ -1,4 +1,4 @@
-import { tryParseMonth } from './dates';
+import { formatMonth, formatMonthDe, tryParseMonth } from './dates';
 import { INCOME_RANGES } from './income-range';
 
 /**
@@ -111,12 +111,41 @@ export const MONTH_FIELDS: Record<string, boolean> = {
   'funding.capDegressionStart': true,
 };
 const MONTH_YEARS: [number, number] = [2000, 2150];
-/** Year range per month field where it differs from MONTH_YEARS (an existing heating can be decades old). */
-const MONTH_YEAR_RANGES: Record<string, [number, number]> = { 'oldHeating.installedMonth': [1900, 2150] };
+/** Years back from the check year for the commissioning of the heating (F1.8, Annahme A11). */
+export const HEATING_MAX_AGE_YEARS = 40;
+/** Years after the application year for the planned commissioning (F1.7, Nutzervorgabe A10). */
+export const INSTALL_WINDOW_YEARS = 3;
 
-/** Allowed years of a month field. */
-export function monthYears(path: string): [number, number] {
-  return MONTH_YEAR_RANGES[path] ?? MONTH_YEARS;
+/**
+ * Allowed months of a month field as absolute months [first, last] (dates.ts: year × 12 + month − 1).
+ * `today` is the check date (F1.8): the heating may date from 40 years back to the current year.
+ */
+export function monthBounds(path: string, today: Date): [number, number] {
+  if (path === 'oldHeating.installedMonth') return heatingBounds(today);
+  return [MONTH_YEARS[0] * 12, MONTH_YEARS[1] * 12 + 11];
+}
+
+/** Commissioning of the heating (F1.8): from January 40 years back to December of the check year. */
+export function heatingBounds(today: Date): [number, number] {
+  const y = today.getFullYear();
+  return [(y - HEATING_MAX_AGE_YEARS) * 12, y * 12 + 11];
+}
+
+/**
+ * Planned commissioning (F1.7) for a fixed application month (absolute): from the application month up to
+ * December of the application year plus three. An automatic application month (commissioning − 4 months) always
+ * satisfies this window, so only fixed application months need it.
+ */
+export function installBounds(application: number): [number, number] {
+  const y = Math.floor(application / 12);
+  return [application, (y + INSTALL_WINDOW_YEARS) * 12 + 11];
+}
+
+/** Range text for the error message: full years as "2000 und 2150", otherwise "03/2027 und 12/2030". */
+export function monthRangeLabel([first, last]: [number, number]): string {
+  const fullYears = first % 12 === 0 && last % 12 === 11;
+  if (fullYears) return `${Math.floor(first / 12)} und ${Math.floor(last / 12)}`;
+  return `${formatMonthDe(first)} und ${formatMonthDe(last)}`;
 }
 
 export const SELECT_VALUES: Record<string, readonly string[]> = {
@@ -193,21 +222,33 @@ export function numberRange(path: string): [number, number] {
   return NUMBER_LIMITS[path] ?? [-GENERIC_LIMIT, GENERIC_LIMIT];
 }
 
-/** Validates a month value (YYYY-MM, year range from monthYears, usually 2000–2150). */
-export function validMonth(path: string, v: string): boolean {
+/** Validates a month value (YYYY-MM) against the range of its field (monthBounds, F1.8 relative to `today`). */
+export function validMonth(path: string, v: string, today: Date): boolean {
   if (v === '') return MONTH_FIELDS[path] === true;
   const m = tryParseMonth(v);
   if (m === null) return false;
-  const y = Math.floor(m / 12);
-  const [min, max] = monthYears(path);
-  return y >= min && y <= max;
+  const [first, last] = monthBounds(path, today);
+  return m >= first && m <= last;
+}
+
+/** Heating commissioning before or after the window of F1.8: moved to the nearest month of the window, with notice (F9.5, AK4). */
+function clampHeating(value: string, today: Date, path: string): { value: string; issue?: InputIssue } {
+  const m = tryParseMonth(value)!;
+  const [first, last] = heatingBounds(today);
+  const clamped = Math.min(Math.max(m, first), last);
+  if (clamped === m) return { value };
+  const to = formatMonthDe(clamped);
+  return {
+    value: formatMonth(clamped),
+    issue: { path, reason: `${formatMonthDe(m)} liegt außerhalb des Zeitraums ${formatMonthDe(first)} bis ${formatMonthDe(last)}, auf ${to} begrenzt` },
+  };
 }
 
 /**
  * Validates a single value (type already matches). Returns the cleaned value and a finding if any.
  * `fallback` is the default for values that cannot be repaired.
  */
-export function checkValue(path: string, value: unknown, fallback: unknown): { value: unknown; issue?: InputIssue } {
+export function checkValue(path: string, value: unknown, fallback: unknown, today: Date = new Date()): { value: unknown; issue?: InputIssue } {
   if (typeof value === 'number') {
     const [min, max] = numberRange(path);
     if (value < min) return { value: min, issue: { path, reason: `${fmt(value)} unter dem Mindestwert, auf ${fmt(min)} gesetzt` } };
@@ -217,7 +258,8 @@ export function checkValue(path: string, value: unknown, fallback: unknown): { v
   if (typeof value === 'string') {
     if (path in MONTH_FIELDS) {
       const v = value.trim();
-      return validMonth(path, v) ? { value: v } : { value: fallback, issue: { path, reason: 'kein gültiger Monat, Standardwert verwendet' } };
+      if (path === 'oldHeating.installedMonth' && tryParseMonth(v) !== null) return clampHeating(v, today, path);
+      return validMonth(path, v, today) ? { value: v } : { value: fallback, issue: { path, reason: 'kein gültiger Monat, Standardwert verwendet' } };
     }
     const allowed = SELECT_VALUES[path];
     if (allowed) {

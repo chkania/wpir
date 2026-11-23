@@ -1,5 +1,6 @@
-import { formatMonthDe, monthOf, parseMonth } from './dates';
+import { formatMonthDe, monthOf, parseMonth, tryParseMonth } from './dates';
 import { SPACE_PROFILE } from './defaults';
+import { installBounds } from './validate';
 import { createSimContext, simulate, type RunResult } from './simulation';
 import type { Inputs, ScenarioResult } from './types';
 
@@ -45,6 +46,8 @@ export interface InstallComparison {
   refTotal: number;
   rows: InstallComparisonRow[];
   bestIndex: number;
+  /** Last commissioning month allowed by a fixed application month (F1.7, AK5); null without a fixed month. */
+  latestInstall: number | null;
 }
 
 /** Splits the compounded total cost by cost category (compounding is linear, so the parts add up to the sum). */
@@ -75,10 +78,13 @@ export function compareInstallTimes(inp: Inputs, run?: RunResult): InstallCompar
   const step = Math.max(1, Math.round(inp.compare.stepMonths));
   const count = Math.max(1, Math.round(inp.compare.count));
   const ref = run?.ref ?? simulate(inp, 'ref', undefined, ctx);
+  // F1.7 (AK5): with a fixed application month, points in time after its window are left out
+  const fixedApplication = tryParseMonth(inp.heatPump.applicationMonth);
+  const latestInstall = fixedApplication === null ? null : installBounds(fixedApplication)[1];
   const rows: InstallComparisonRow[] = [];
   for (let i = 0; i < count; i++) {
     const month = start + i * step;
-    if (month >= end) break;
+    if (month >= end || (latestInstall !== null && month > latestInstall)) break;
     const kfw = simulate(inp, 'kfw', month, ctx);
     const tax = simulate(inp, 'tax', month, ctx);
     const best = tax.feasible && tax.totalCost < kfw.totalCost ? 'tax' : 'kfw';
@@ -108,7 +114,7 @@ export function compareInstallTimes(inp: Inputs, run?: RunResult): InstallCompar
     r.extraVsFirst = r.bestTotal - first;
     if (r.bestTotal < rows[bestIndex].bestTotal) bestIndex = i;
   });
-  return { refTotal: ref.totalCost, rows, bestIndex };
+  return { refTotal: ref.totalCost, rows, bestIndex, latestInstall };
 }
 
 /** Comparison of the cheapest point in time with a neighbour (F7.3). */
