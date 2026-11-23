@@ -246,7 +246,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## marked 18.1.3
+## marked 18.2.0
 
 Lizenz: MIT · https://github.com/markedjs/marked
 
