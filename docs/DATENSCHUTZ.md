@@ -68,7 +68,7 @@ Der Rechner nutzt die Open-Source-Software Matomo, um Besucherzahlen auszuwerten
 
 Beim Aufruf einer Seite werden übertragen: die aufgerufene Seite mit festem Namen (z. B. „Rechner“ oder „Hilfe“), die Adresse **ohne** den Teil nach `#`, die verweisende Seite, Browser, Betriebssystem, Bildschirmauflösung, Sprache und Zeitpunkt sowie Ihre IP-Adresse, die vor der Speicherung gekürzt wird (IP-Maskierung). **Nicht** übertragen werden Ihre Eingaben, Ergebnisse oder die Bezeichnung Ihres Szenarios.
 
-Es werden **keine Cookies** gesetzt. Hat Ihr Browser „Do Not Track“ aktiviert, findet keine Erfassung statt. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einer datensparsamen Auswertung der Nutzung).
+Es werden **keine Cookies** gesetzt. Hat Ihr Browser „Do Not Track“ aktiviert, findet keine Erfassung statt. Automatisierte Browser, die dem Rechner melden, dass sie ferngesteuert werden (WebDriver-Kennung `navigator.webdriver`, z. B. Test- und Prüfprogramme), werden ebenfalls nicht erfasst. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einer datensparsamen Auswertung der Nutzung).
 
 #### Widerspruch gegen die Besucherstatistik
 

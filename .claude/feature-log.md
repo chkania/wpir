@@ -90,3 +90,18 @@ Felder:
 - Notiz: Bash-Sperre durch rtk-Hook im Auto-Modus blockierte Tests und Commits, bis der Auto-Modus verlassen wurde. Tests und Build führte die Hauptsitzung nach Entsperrung selbst aus.
 
 Retro 2026-11-20: 4 Läufe (F37, F38, F39, F5.4). Der Anforderungs-Review fand in 4 von 4 Läufen 3 bis 15 Befunde (Quellen und Bestandsfundorte nicht geprüft), und in 4 von 4 Läufen fehlte ein von der Anforderung verlangter Test. Übernommen: V1 Fundort-Suche und Quellenprüfung im Autor, V2 Abgleich Anforderung gegen Tests und Abgrenzung im Implementer, V3 nur eine Prüfrunde im Autor. Messen bei den nächsten zwei Läufen: Tokens des Autors und Zahl der Review-Befunde; zeigt sich mehr Review-Aufwand, V3 zurücknehmen. Nutzer-Rückfragen lassen sich aus dem Laufbuch nicht als Standardannahmen ableiten (nur Anzahl, kein Inhalt) – künftig den Inhalt der Rückfragen im Laufbuch festhalten.
+
+## 2026-11-24 – N10 Automatisierte Browser nicht erfassen (Matomo)
+
+- Stufen:
+  - Anforderung (requirements-author): 1 Durchgang, 76 k, 1 min
+  - Anforderungs-Review (requirements-reviewer): 1 Durchgang (2 Runden intern), 58 k, 2 min
+  - Umsetzung (implementer): 2 Durchgänge (Umsetzung, Befunde aus Review/QA), 154 k, 4 min
+  - Code-Review (code-reviewer): 1 Durchgang (OK, nur geringe Befunde), 29 k, <1 min
+  - QA (qa): 1 Durchgang (APPROVED), 31 k, 2 min
+- Spät gefunden:
+  - Anforderungs-Review: happy-dom liefert `navigator.webdriver === true`, zwei bestehende Tests wären rot geworden; Annahme im Entwurf falsch → Anforderung.
+  - Anforderungs-Review: Matomo-Details (Teilstring-Abgleich, neuer Chrome-Headless ohne `HeadlessChrome`) nicht belegt → Anforderung.
+  - Code-Review/QA: Testtiefe bei Stub ohne `navigator` (Skript nicht geprüft), Testname falsch zugeordnet → Umsetzung.
+- Nutzer: Anforderung übernehmen (1), Anforderung freigeben (1), Agentenkette nach Neuladen fortsetzen (1).
+- Notiz: Agenten waren nach Ausführung der Kette nicht mehr verfügbar; nach `/reload-plugins` wieder da. Profil lag bereits auf origin/main (#77); eigenes Entwurfsprofil nicht übernommen. Reviewer hat keine Datei schreiben können; Freigabe-Fassung von mir gespeichert.

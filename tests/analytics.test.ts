@@ -27,10 +27,10 @@ describe('N10 Besucherstatistik (Matomo)', () => {
     expect(document.querySelector('script[src*="matomo"]')).toBeNull();
   });
 
-  it('ohne Cookies, mit Do Not Track, ohne URL-Hash und mit festem Seitentitel', () => {
+  it('N10.1 ohne Cookies, mit Do Not Track, ohne URL-Hash und mit festem Seitentitel', () => {
     location.hash = '#s=geheime-eingaben';
     document.title = 'Angebot Müller – Wärmepumpen-Investitionsrechner';
-    initAnalytics('Rechner', { enabled: true, storage: memoryStorage() });
+    initAnalytics('Rechner', { enabled: true, webdriver: false, storage: memoryStorage() });
     const q = window._paq!;
     expect(q).toContainEqual(['disableCookies']);
     expect(q).toContainEqual(['setDoNotTrack', true]);
@@ -52,17 +52,17 @@ describe('N10 Besucherstatistik (Matomo)', () => {
     expect(script.async).toBe(true);
   });
 
-  it('Widerspruch im Browser-Speicher verhindert die Erfassung (kein Cookie)', () => {
+  it('N10 Widerspruch im Browser-Speicher verhindert die Erfassung (kein Cookie)', () => {
     const storage = memoryStorage();
     expect(isOptedOut(storage)).toBe(false);
     expect(setOptOut(true, storage)).toBe(true);
     expect(storage.getItem(OPT_OUT_KEY)).toBe('1');
-    initAnalytics('Rechner', { enabled: true, storage });
+    initAnalytics('Rechner', { enabled: true, webdriver: false, storage });
     expect(window._paq).toBeUndefined();
     expect(document.cookie).toBe('');
     setOptOut(false, storage);
     expect(isOptedOut(storage)).toBe(false);
-    initAnalytics('Rechner', { enabled: true, storage });
+    initAnalytics('Rechner', { enabled: true, webdriver: false, storage });
     expect(commands()).toContain('trackPageView');
   });
 
@@ -90,6 +90,62 @@ describe('N10 Besucherstatistik (Matomo)', () => {
       expect(read(html), html).not.toMatch(/style="/);
       expect(read(entry), entry).toMatch(/initAnalytics\('[^']+'\);/);
     }
+  });
+
+  it('N10.1 WebDriver-Kennung true (explizit): keine Erfassung, kein Skript', () => {
+    initAnalytics('Rechner', { enabled: true, webdriver: true, storage: memoryStorage() });
+    expect(window._paq).toBeUndefined();
+    expect(document.querySelector('script[src*="matomo"]')).toBeNull();
+  });
+
+  it('N10.1 ohne Option gilt der Browserwert: happy-dom meldet webdriver true, also keine Erfassung', () => {
+    // guards the default: happy-dom reports navigator.webdriver === true
+    expect(navigator.webdriver).toBe(true);
+    initAnalytics('Rechner', { enabled: true, storage: memoryStorage() });
+    expect(window._paq).toBeUndefined();
+    expect(document.querySelector('script[src*="matomo"]')).toBeNull();
+  });
+
+  it('N10.1 webdriver false überschreibt den Browserwert true: Erfassung wie gewohnt', () => {
+    initAnalytics('Rechner', { enabled: true, webdriver: false, storage: memoryStorage() });
+    expect(commands()).toEqual(expect.arrayContaining(['disableCookies', 'setDoNotTrack', 'discardHashTag', 'setDocumentTitle', 'trackPageView', 'setSiteId', 'setTrackerUrl']));
+    expect(document.querySelector('script[src*="matomo.js"]')).not.toBeNull();
+    // the flag is only read in the browser, never sent to Matomo
+    expect(JSON.stringify(window._paq)).not.toContain('webdriver');
+  });
+
+  it('N10.1 Browser ohne Kennung (navigator ohne webdriver): Erfassung läuft', () => {
+    const stub = { navigator: {} } as unknown as Window;
+    initAnalytics('Rechner', { enabled: true, win: stub, doc: document, storage: memoryStorage() });
+    expect(stub._paq).toEqual(expect.arrayContaining([['trackPageView']]));
+    expect(document.querySelector('script[src*="matomo.js"]')).not.toBeNull();
+  });
+
+  it('N10.1 Browser ohne navigator-Objekt: Erfassung läuft (kein Absturz)', () => {
+    const stub = {} as unknown as Window;
+    initAnalytics('Rechner', { enabled: true, win: stub, doc: document, storage: memoryStorage() });
+    expect(stub._paq).toEqual(expect.arrayContaining([['trackPageView']]));
+    expect(document.querySelector('script[src*="matomo"]')).not.toBeNull();
+  });
+
+  it('N10.1 Browserwert false (navigator.webdriver = false) ohne Option: Erfassung läuft', () => {
+    const stub = { navigator: { webdriver: false } } as unknown as Window;
+    initAnalytics('Rechner', { enabled: true, win: stub, doc: document, storage: memoryStorage() });
+    expect(stub._paq).toEqual(expect.arrayContaining([['trackPageView']]));
+  });
+
+  it('N10.1 Datenschutzerklärung Abschnitt 4 nennt die WebDriver-Regel', () => {
+    const text = read('docs/DATENSCHUTZ.md');
+    const section = text.slice(text.indexOf('## 4. Plugins und Tools'), text.indexOf('## 5. Ihre Rechte'));
+    expect(section).toContain('navigator.webdriver');
+    expect(section).toContain('werden ebenfalls nicht erfasst');
+  });
+
+  it('N10.2 Betriebshinweis in der Anforderungsdatei: Ausschluss von HeadlessChrome in Matomo', () => {
+    const text = read('docs/anforderungen/N10-besucherstatistik.md');
+    expect(text).toContain('Ausgeschlossene User Agents');
+    expect(text).toContain('HeadlessChrome');
+    expect(text).toContain('N10.2');
   });
 
   it('CSP erlaubt nur zusätzlich die Matomo-Instanz', async () => {
