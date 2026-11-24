@@ -7,6 +7,7 @@
  * - `discardHashTag`: the URL hash is never sent – shared links carry all inputs in "#z=…" (formerly "#s=…") (F9.2)
  * - `setDocumentTitle`: fixed page title, because the window title contains the scenario name (F16.1)
  * - opt-out (objection, Widerspruch) on the privacy page, stored in localStorage instead of a cookie
+ * - automated browsers (WebDriver flag, WebDriver-Kennung, `navigator.webdriver`) are not tracked (N10.1)
  * Only active in the production build (not in the dev server or tests).
  */
 
@@ -89,6 +90,8 @@ export interface AnalyticsOptions {
   doc?: Document;
   /** Where the objection is stored; defaults to window.localStorage. */
   storage?: Pick<Storage, 'getItem'> | null;
+  /** Overrides navigator.webdriver (WebDriver flag); default: the browser's value. true = not tracked. */
+  webdriver?: boolean;
 }
 
 /**
@@ -96,8 +99,15 @@ export interface AnalyticsOptions {
  * @param pageTitle fixed title reported to Matomo, e.g. "Rechner" (never user input)
  */
 export function initAnalytics(pageTitle: string, opts: AnalyticsOptions = {}): void {
-  const { enabled = import.meta.env.PROD, win = window, doc = document, storage = safeStorage() } = opts;
-  if (!enabled || isOptedOut(storage)) return;
+  const {
+    enabled = import.meta.env.PROD,
+    win = window,
+    doc = document,
+    storage = safeStorage(),
+    // automated browsers (WebDriver-Kennung) announce themselves; read here only, never sent (N10.1)
+    webdriver = win.navigator?.webdriver === true,
+  } = opts;
+  if (!enabled || webdriver || isOptedOut(storage)) return;
   const paq: MatomoQueue = (win._paq = win._paq || []);
   // tracker methods like "setCustomDimension" must be called before "trackPageView"
   paq.push(['setDoNotTrack', true]);
