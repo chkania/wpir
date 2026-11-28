@@ -42,7 +42,7 @@ Förderprogramme, Energiepreise und Steuerregeln ändern sich laufend – der Re
 
 - **Melde Fehler oder veraltete Annahmen** – über das Formular [Fehler oder veralteter Wert](https://github.com/chkania/wpir/issues/new?template=bug_report.yml), am besten mit Quelle.
 - **Bring deine Ideen ein** – fehlende Szenarien, unklare Erklärungen, bessere Darstellungen.
-- **Entwickle mit** – Rechenlogik, Texte, Tests, Barrierefreiheit. Ablauf, Commit-Format und Konventionen findest du in [CONTRIBUTING.md](CONTRIBUTING.md); `CLAUDE.md` und `docs/anforderungen/` beschreiben Struktur und Anforderungen. Mit Claude Code kannst du eine Änderung auch von einer Agentenkette umsetzen lassen (`/feature`, [Ablauf](CONTRIBUTING.md#mit-claude-code-die-agentenkette-feature)).
+- **Entwickle mit** – Rechenlogik, Texte, Tests, Barrierefreiheit. Ablauf, Commit-Format und Konventionen findest du in [CONTRIBUTING.md](CONTRIBUTING.md); `CLAUDE.md` und `docs/anforderungen/` beschreiben Struktur und Anforderungen. Mit Claude Code kannst du eine Änderung auch von einer Agentenkette umsetzen lassen (`/chk-sdlc:feature`, [Ablauf](CONTRIBUTING.md#mit-claude-code-die-agentenkette-chk-sdlcfeature)).
 
 Auch kleine Beiträge wie ein korrigierter Tippfehler oder eine geprüfte Quelle helfen – schön, wenn du dabei bist!
 

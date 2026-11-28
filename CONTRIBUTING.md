@@ -19,14 +19,16 @@ Schön, dass du mithelfen möchtest! Der Wärmepumpen-Investitionsrechner soll M
 
 Direkte Commits auf `main` sind möglich; dann zählt jede einzelne Commit-Nachricht.
 
-## Mit Claude Code: die Agentenkette `/feature`
+## Mit Claude Code: die Agentenkette `/chk-sdlc:feature`
 
 Wenn du mit [Claude Code](https://claude.com/claude-code) arbeitest, kannst du eine Änderung von der Idee bis zum Pull Request von einer Kette spezialisierter Agenten erledigen lassen. Das ist ein Angebot, keine Pflicht: Der Ablauf oben gilt genauso, wenn du von Hand arbeitest, und das Ergebnis der Kette ist ein ganz normaler Pull Request.
+
+**Einrichten (einmalig):** Die Kette kommt aus dem Plugin `chk-sdlc` ([chkania/claude-chk-sdlc](https://github.com/chkania/claude-chk-sdlc)). `.claude/settings.json` aktiviert es; beim ersten Öffnen des Projekts in Claude Code vertraust du dem Marketplace und installierst das Plugin (sonst: `claude plugin marketplace add chkania/claude-chk-sdlc`, dann `claude plugin install chk-sdlc@claude-chk-sdlc --scope project`).
 
 **Starten:** im Projektverzeichnis in Claude Code
 
 ```
-/feature Mehrere Szenarien im Browser speichern und vergleichen
+/chk-sdlc:feature Mehrere Szenarien im Browser speichern und vergleichen
 ```
 
 Beschreib die Idee so, wie du sie einem Menschen erklären würdest – was du erreichen willst und warum. Die Kette legt einen Branch von `main` an und durchläuft diese Stufen:
@@ -41,7 +43,7 @@ Beschreib die Idee so, wie du sie einem Menschen erklären würdest – was du e
 
 Geringe Befunde sammelt die Kette und lässt sie nach der Freigabe in einem Rutsch beheben. Zwischenstände landen als lokale Commits und werden vor dem Push zu einem Commit zusammengefasst.
 
-**Prozess verbessern:** Jeder Lauf hinterlässt ein paar Zeilen im Laufbuch [.claude/feature-log.md](.claude/feature-log.md) – Aufwand je Stufe und welche Befunde erst spät auffielen. `/feature-retro` wertet es aus (Agent `process-retro`, Sonnet) und schlägt höchstens drei Änderungen an Agenten oder Skill vor; du entscheidest, welche übernommen werden. Die Kette empfiehlt eine Retro nach fünf Läufen oder wenn eine Stufe drei Durchgänge brauchte.
+**Prozess verbessern:** Jeder Lauf hinterlässt ein paar Zeilen im Laufbuch [.claude/feature-log.md](.claude/feature-log.md) – Aufwand je Stufe und welche Befunde erst spät auffielen. `/chk-sdlc:retro` wertet es aus (Agent `process-retro`, Sonnet) und schlägt höchstens drei Änderungen an Agenten oder Skill vor; du entscheidest, welche übernommen werden. Die Kette empfiehlt eine Retro nach fünf Läufen oder wenn eine Stufe drei Durchgänge brauchte.
 
 Die Agenten 1 und 2 schreiben keinen Code; die Reviewer und die QA ändern keine Dateien. Beide Anforderungsagenten arbeiten mit derselben Prüfliste ([.claude/requirements-checklist.md](.claude/requirements-checklist.md)), die auch beschreibt, wie eine Anforderung aufgebaut ist.
 
@@ -54,7 +56,7 @@ Die Agenten 1 und 2 schreiben keinen Code; die Reviewer und die QA ändern keine
 
 **Danach:** Der Pull Request durchläuft dieselbe CI und dasselbe Review wie jeder andere. Prüf die Anforderung und den Code selbst, bevor du ihn zur Zusammenführung freigibst – du bleibst die Autorin bzw. der Autor.
 
-Die Agenten mit ihren Modellen liegen in [.claude/agents/](.claude/agents/), der Ablauf in [.claude/skills/feature/SKILL.md](.claude/skills/feature/SKILL.md). Du kannst einzelne Agenten auch direkt nutzen, z. B. „Lass den Agenten `qa` meine Änderungen prüfen“.
+Agenten, Modelle und Ablauf sind im Plugin-Repo [chkania/claude-chk-sdlc](https://github.com/chkania/claude-chk-sdlc) beschrieben. Was für dieses Projekt gilt (Testbefehle, QA-Kriterien, Review-Schwerpunkte), steht in [.claude/feature-profile.md](.claude/feature-profile.md). Du kannst einzelne Agenten auch direkt nutzen, z. B. „Lass den Agenten `chk-sdlc:qa` meine Änderungen prüfen“.
 
 ## Sprache
 
