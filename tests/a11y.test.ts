@@ -61,3 +61,16 @@ describe('N7 Fokus sichtbar (WCAG 2.4.7)', () => {
     for (const text of [base, modern, css('help.css')]) expect(text).not.toMatch(/outline:\s*(none|0)\b/);
   });
 });
+
+describe('F27.13 Regler: Farben nur über Tokens, Spur und Griff ≥ 3 : 1 (WCAG 1.4.11)', () => {
+  const block = (text: string) => [...text.matchAll(/([^{}]*\.sens-[^{}]*)\{([^{}]*)\}/g)].map((m) => m[2]).join('\n');
+  it('F27.13 keine festen Farben in den Regeln der Karte', () => {
+    for (const text of [base, modern]) expect(block(text)).not.toMatch(/#[0-9a-fA-F]{3,8}\b|rgb\(|hsl\(/);
+  });
+  for (const [name, t] of Object.entries(themes)) {
+    it(`F27.13 ${name}: Spur (c-muted) und Griff (accent) mindestens 3 : 1 auf der Fläche`, () => {
+      expect(ratio(t['c-muted'], t.surface), 'Spur').toBeGreaterThanOrEqual(3);
+      expect(ratio(t.accent, t.surface), 'Griff').toBeGreaterThanOrEqual(3);
+    });
+  }
+});

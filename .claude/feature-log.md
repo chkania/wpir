@@ -105,3 +105,25 @@ Retro 2026-11-20: 4 Läufe (F37, F38, F39, F5.4). Der Anforderungs-Review fand i
   - Code-Review/QA: Testtiefe bei Stub ohne `navigator` (Skript nicht geprüft), Testname falsch zugeordnet → Umsetzung.
 - Nutzer: Anforderung übernehmen (1), Anforderung freigeben (1), Agentenkette nach Neuladen fortsetzen (1).
 - Notiz: Agenten waren nach Ausführung der Kette nicht mehr verfügbar; nach `/reload-plugins` wieder da. Profil lag bereits auf origin/main (#77); eigenes Entwurfsprofil nicht übernommen. Reviewer hat keine Datei schreiben können; Freigabe-Fassung von mir gespeichert.
+
+## 2026-11-28 – Einflussgrößen mit Schiebereglern (F27.2–F27.14, F30.2)
+
+- Stufen:
+  - Anforderung (requirements-author): 3 Durchgänge (Rückfragen, 2 Überarbeitungen), ca. 320 k, ca. 4 min
+  - Anforderungs-Review (requirements-reviewer): 2 Durchgänge (Prüfung, Überarbeitung Kombination), ca. 200 k, ca. 6 min
+  - Umsetzung (implementer): 2 Durchgänge (Umsetzung, neun Befunde), ca. 600 k, ca. 24 min
+  - Code-Review (code-reviewer): 1 Durchgang (OK, nur geringe Befunde), 50 k, <1 min
+  - QA (qa): 1 Durchgang (APPROVED), 62 k, ca. 30 min
+- Spät gefunden:
+  - Anforderungs-Review: Positionen nicht auf Voreinstellung erreichbar (Schrittweite), Grenzen für negative Werte fehlten, Obergrenze nicht aus NUMBER_LIMITS, Kennzahlenbeschriftung wechselte mit dem Vorzeichen → Anforderung.
+  - Umsetzung: Fehleranzeige weicht von F27.12 ab (Zellen „–“, Meldung darunter); Tests in eigener Datei wegen Speicherlimit → Anforderung/Umsetzung, Entscheidung des Nutzers: umgesetzte Fassung.
+  - Code-Review/QA: Schriftgröße in der Karte zu klein, Hinweistext mit fester Spanne, Obergrenze fest im Code → Umsetzung.
+- Nutzer:
+  - Spannen: Steigerungen ±20 PP, CO₂ ±30 %, JAZ ±2, Zinsen und Opportunitätszins ±5 PP; Gas/Öl heute entfällt (Rückfrage Bezugsgröße: jährlich).
+  - Darstellung: gemeinsamer Ergebnisblock; Reihenfolge: fest; KI-Export: bleibt.
+  - Mechanik: Eingabe links = Voreinstellung des Reglers (Freitext).
+  - Regler-Zusammenwirkung: kombinieren (statt ein Regler wirkt).
+  - CO₂-Anzeige: letzter Stützpunkt.
+  - Fehleranzeige: umgesetzte Fassung.
+  - Anforderung: akzeptiert, freigegeben.
+- Notiz: Reviewer und Author ohne Schreibwerkzeug; Dateien von der Koordination gespeichert. Testdatei aus Speichergründen getrennt (Test-Speicher je gemounteter App ~40 MB in happy-dom, Vorbestand).

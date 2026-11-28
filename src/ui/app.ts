@@ -16,7 +16,9 @@ import { reportHtml } from './report';
 import { burdenHtml } from './burden';
 import { MAX_VARIANTS, variantName, variantResult, type Variant } from '../core/variants';
 import { VARIANTS_LIMIT_TEXT, variantCurves, variantCurvesTableHtml, variantDiffsHtml, variantsTableHtml } from './variants';
-import { sensitivity, type Sensitivity } from '../core/sensitivity';
+import { keyFigures, sensitivity, type Sensitivity } from '../core/sensitivity';
+import { mountSensitivityCard } from './sensitivity-card';
+import { fmtTons, keyFigureTexts } from './key-figures';
 import { energySplit } from '../core/prices';
 import { cleanScenarioName, decodeHash, encodeHash, exportFileName, exportJson, importJson, mergeInputs } from '../core/serialize';
 import {
@@ -48,7 +50,7 @@ function withChartLib(fn: (lib: ChartLib) => void): void {
   else void loadChartLib().then(fn, () => undefined);
 }
 import { SECTIONS, getPath, setPath, type Field } from './fields';
-import { escapeHtml, fmtDuration, fmtEur, fmtMonth, fmtNum, fmtPct, safeHref } from './format';
+import { escapeHtml, fmtEur, fmtMonth, fmtNum, fmtPct, safeHref } from './format';
 import { RECOMMEND_SUBJECT, RECOMMEND_TEXT, calculatorUrl, recommendLinks, shareBaseUrl } from './share';
 import { logoSvg } from '../logo';
 import { BUG_REPORT_URL, BUY_ME_A_COFFEE_URL, PAGE_TITLE, CONTRIBUTING_URL, DONATION_ACCOUNT, FEATURE_REQUEST_URL, PAYPAL_URL, REPO_URL } from '../project';
@@ -158,7 +160,6 @@ const CHART_TABS: [ChartId, string][] = [
   ['prices', 'Preisentwicklung'],
   ['install', 'Zeitpunkt der Umrüstung'],
   ['energy', 'Energie je Monat'],
-  ['sensitivity', 'Einflussgrößen'],
 ];
 
 /**
@@ -210,6 +211,8 @@ export function mountApp(root: HTMLElement, env: AppEnv = {}): AppController {
     }),
   );
 
+  const sensitivityCard = mountSensitivityCard($<HTMLElement>('#sensitivity-body'));
+
   const canvases = Object.fromEntries(
     CHART_TABS.map(([id]) => [id, $<HTMLCanvasElement>(`canvas[data-chart="${id}"]`)]),
   ) as Record<ChartId, HTMLCanvasElement>;
@@ -219,7 +222,7 @@ export function mountApp(root: HTMLElement, env: AppEnv = {}): AppController {
     withChartLib((lib) => {
       if (!last) return;
       charts ??= new lib.Charts(canvases);
-      charts.update(last.run, priceRows(inputs), last.cmp, last.events, last.sens, energyYear(inputs));
+      charts.update(last.run, priceRows(inputs), last.cmp, last.events, energyYear(inputs));
     });
 
   // ---------- Links to documents (F16.4) ----------
@@ -982,26 +985,16 @@ export function mountApp(root: HTMLElement, env: AppEnv = {}): AppController {
     $<HTMLElement>('#burden').innerHTML = burdenHtml(run);
     renderInstallTable(cmp);
     renderYearTable(run, events);
+    sensitivityCard.render(inputs, run);
     const prices = priceRows(inputs);
     const energy = energyYear(inputs);
     drawCharts();
-    renderChartTables(run, prices, cmp, sens, energy);
+    renderChartTables(run, prices, cmp, energy);
   }
 
-  function renderChartTables(run: RunResult, prices: ReturnType<typeof priceRows>, cmp: InstallComparison, sens: Sensitivity, energy: EnergyYear): void {
-    const tables = chartTables(run, prices, cmp, sens, energy);
+  function renderChartTables(run: RunResult, prices: ReturnType<typeof priceRows>, cmp: InstallComparison, energy: EnergyYear): void {
+    const tables = chartTables(run, prices, cmp, energy);
     renderEnergyNote(energy);
-    // Summary of the sensitivity analysis (F27) above the chart
-    const note = root.querySelector<HTMLElement>('[data-chart-note="sensitivity"]');
-    const top = sens.items[0];
-    if (note && top) {
-      const lo = Math.min(top.low, top.high);
-      const hi = Math.max(top.low, top.high);
-      note.innerHTML =
-        `Jede Annahme wird einzeln etwas niedriger und höher gerechnet, alle anderen bleiben gleich. ` +
-        `Am stärksten wirkt <strong>${escapeHtml(top.label)}</strong>: Die Ersparnis liegt dann zwischen ${fmtEur(lo)} und ${fmtEur(hi)} (heute ${fmtEur(sens.base)}).` +
-        (lo < 0 ? ' Schon diese eine Annahme kann die Wärmepumpe unwirtschaftlich machen.' : '');
-    }
     for (const [id, t] of Object.entries(tables)) {
       const el = root.querySelector<HTMLElement>(`[data-chart-table="${id}"]`);
       if (!el) continue;
@@ -1029,24 +1022,16 @@ export function mountApp(root: HTMLElement, env: AppEnv = {}): AppController {
 
   function renderKpis(run: RunResult): void {
     const best = run.best === 'tax' ? run.tax : run.kfw;
-    const saving = run.ref.totalCost - best.totalCost;
-    const be = run.best === 'tax' ? run.breakEvenTax : run.breakEvenKfw;
-    const install = best.installMonth;
-    const beText =
-      be === null
-        ? 'nicht im Zeitraum'
-        : install !== null && be > install
-          ? `${fmtMonth(be)} <small>(${fmtDuration(be - install)} nach Inbetriebnahme)</small>`
-          : fmtMonth(be);
-    // CO2 balance (F25): heating and cooking, heat pump with the electricity mix (Strommix)
-    const co2Saved = run.ref.co2Tons - best.co2Tons;
+    // Labels and values come from the shared key figures (also used by the slider card, F27.8)
+    const t = Object.fromEntries(keyFigureTexts(keyFigures(run)).map((x) => [x.id, x]));
+    const tone = (x: { negative: boolean }) => (x.negative ? 'bad' : 'good');
     $<HTMLElement>('#kpis').innerHTML = `
-      ${kpi('Ohne Wärmepumpe', fmtEur(run.ref.totalCost), 'ref', 'Gesamtkosten im Zeitraum')}
-      ${kpi('WP + KfW-Zuschuss', fmtEur(run.kfw.totalCost), 'kfw', `Zuschuss ${fmtEur(run.kfw.kfw?.subsidy ?? 0)}`, run.best === 'kfw')}
-      ${kpi('WP + Steuerbonus', run.tax.feasible ? fmtEur(run.tax.totalCost) : 'nicht möglich', 'tax', run.tax.feasible ? `Steuerbonus ${fmtEur(run.tax.tax?.total ?? 0)}` : (run.tax.tax?.notes[0] ?? ''), run.best === 'tax')}
-      ${kpi(saving >= 0 ? 'Ersparnis mit WP' : 'Mehrkosten mit WP', fmtEur(Math.abs(saving)), saving >= 0 ? 'good' : 'bad', `bester Weg: ${run.best === 'tax' ? 'Steuerbonus' : 'KfW'}`)}
-      ${kpi('Amortisation', beText, 'neutral', 'kumulierte Kosten dauerhaft unter Referenz')}
-      ${kpi(co2Saved >= 0 ? 'CO₂-Einsparung' : 'CO₂-Mehrausstoß', `${fmtTons(Math.abs(co2Saved))} t`, co2Saved >= 0 ? 'good' : 'bad', `im Zeitraum: ohne WP ${fmtTons(run.ref.co2Tons)} t, mit WP ${fmtTons(best.co2Tons)} t`)}
+      ${kpi(t.ref.label, t.ref.value, 'ref', 'Gesamtkosten im Zeitraum')}
+      ${kpi(t.kfw.label, t.kfw.value, 'kfw', `Zuschuss ${fmtEur(run.kfw.kfw?.subsidy ?? 0)}`, run.best === 'kfw')}
+      ${kpi(t.tax.label, t.tax.value, 'tax', run.tax.feasible ? `Steuerbonus ${fmtEur(run.tax.tax?.total ?? 0)}` : (run.tax.tax?.notes[0] ?? ''), run.best === 'tax')}
+      ${kpi(t.saving.label, t.saving.value, tone(t.saving), `bester Weg: ${run.best === 'tax' ? 'Steuerbonus' : 'KfW'}`)}
+      ${kpi(t.amortisation.label, t.amortisation.value, 'neutral', 'kumulierte Kosten dauerhaft unter Referenz')}
+      ${kpi(t.co2.label, t.co2.value, tone(t.co2), `im Zeitraum: ohne WP ${fmtTons(run.ref.co2Tons)} t, mit WP ${fmtTons(best.co2Tons)} t`)}
     `;
     $<HTMLElement>('#horizon-note').textContent =
       `Betrachtung ${fmtMonth(run.ref.months[0].month)} – ${fmtMonth(run.ref.months[run.ref.months.length - 1].month)}, ` +
@@ -1932,7 +1917,7 @@ export function mountApp(root: HTMLElement, env: AppEnv = {}): AppController {
     }
     // Chart.js is normally loaded long before; without it the placeholder text stays (e.g. printing right at the start)
     const rc = chartLib ? new chartLib.Charts(canvases, 2) : null;
-    rc?.update(last.run, priceRows(inputs), last.cmp, last.events, last.sens, energyYear(inputs));
+    rc?.update(last.run, priceRows(inputs), last.cmp, last.events, energyYear(inputs));
     for (const fig of report.querySelectorAll<HTMLElement>('[data-report-chart]')) {
       const source = fig.querySelector('canvas');
       const copy = document.createElement('canvas');
@@ -2049,11 +2034,6 @@ const SCENARIO_LABEL = { all: 'beide WP-Wege', ref: 'ohne WP', kfw: 'KfW-Weg', t
 
 function scenarioChip(e: KeyEvent): string {
   return `<span class="chip chip-${e.scenario}">${SCENARIO_LABEL[e.scenario]}</span>`;
-}
-
-/** Tonnes with one decimal place, German format. */
-function fmtTons(t: number): string {
-  return t.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 }
 
 function kpi(label: string, value: string, tone: string, sub: string, best = false): string {
@@ -2299,12 +2279,16 @@ function layout(): string {
         </div>
         ${CHART_TABS.map(
           ([id, l], i) => `<div role="tabpanel" id="panel-${id}" aria-labelledby="tab-${id}" data-panel="${id}" ${i === 0 ? '' : 'hidden'}>
-            ${id === 'sensitivity' || id === 'energy' ? `<p class="chart-note muted small" data-chart-note="${id}"></p>` : ''}
+            ${id === 'energy' ? `<p class="chart-note muted small" data-chart-note="${id}"></p>` : ''}
             <div class="chart-wrap"><canvas data-chart="${id}" role="img" aria-label="Diagramm ${l}. Die Werte stehen in der Tabelle darunter."></canvas></div>
             <details class="chart-data"><summary>Werte als Tabelle</summary><div class="table-wrap" data-chart-table="${id}"></div></details>
           </div>`,
         ).join('')}
       </div>
+      <section id="sensitivity" class="card sensitivity" aria-labelledby="sensitivity-title">
+        <h2 id="sensitivity-title">Einflussgrößen</h2>
+        <div id="sensitivity-body"></div>
+      </section>
       <div id="details" class="details"></div>
       <div id="tariff" class="card tariff"></div>
       <div class="card">

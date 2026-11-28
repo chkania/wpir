@@ -430,14 +430,14 @@ describe('UI (Smoke-Test)', () => {
     const tabs = [...root.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
     expect(tabs[0].getAttribute('aria-controls')).toBe('panel-cumulative');
     expect(root.querySelector('#panel-cumulative')!.getAttribute('role')).toBe('tabpanel');
-    expect(tabs.map((t) => t.tabIndex)).toEqual([0, -1, -1, -1, -1, -1]);
+    expect(tabs.map((t) => t.tabIndex)).toEqual([0, -1, -1, -1, -1]);
     tabs[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     expect(tabs[1].getAttribute('aria-selected')).toBe('true');
-    expect(tabs.map((t) => t.tabIndex)).toEqual([-1, 0, -1, -1, -1, -1]);
+    expect(tabs.map((t) => t.tabIndex)).toEqual([-1, 0, -1, -1, -1]);
     expect(root.querySelector<HTMLElement>('#panel-annual')!.hidden).toBe(false);
     tabs[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
-    expect(tabs[5].getAttribute('aria-selected')).toBe('true');
-    tabs[5].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(tabs[4].getAttribute('aria-selected')).toBe('true');
+    tabs[4].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     expect(tabs[0].getAttribute('aria-selected')).toBe('true');
   });
 
@@ -569,7 +569,7 @@ describe('UI (Smoke-Test)', () => {
     expect(report.parentElement).toBe(document.body);
     expect(report.querySelector('h1')!.textContent).toContain('Bericht');
     expect(report.querySelector('.report-details')!.textContent).toContain('KfW-Zuschuss (458)');
-    expect(report.querySelectorAll('[data-report-chart]')).toHaveLength(3);
+    expect(report.querySelectorAll('[data-report-chart]')).toHaveLength(2);
     expect(report.classList.contains('is-rendering')).toBe(false);
     expect(document.documentElement.dataset.theme).toBe('light');
     expect(document.title).toMatch(/^Wärmepumpen-Bericht – \d{4}-\d{2}-\d{2}$/);
@@ -598,19 +598,6 @@ describe('UI (Smoke-Test)', () => {
     app.recalc();
     expect(head()).toEqual(['Monat', 'Bedarf Heizen', 'Bedarf Warmwasser', 'Bedarf Kochen', 'Bedarf gesamt', 'Gas – Altanlage', 'Strom – Wärmepumpe', 'Gas zum Kochen – mit Wärmepumpe']);
     expect(note()).toMatch(/Heizen, Warmwasser und Kochen.*kWh Gas zum Kochen/);
-  });
-
-  it('F27 Einflussgrößen: Reiter, Tabelle sortiert nach Spanne, Zusammenfassung', () => {
-    const { root, app } = mount();
-    const canvas = root.querySelector('canvas[data-chart="sensitivity"]')!;
-    expect(canvas.getAttribute('role')).toBe('img');
-    expect(canvas.getAttribute('aria-label')).toContain('Einflussgrößen');
-    const rows = [...root.querySelectorAll('[data-chart-table="sensitivity"] tbody tr')];
-    const sens = app.lastResult()!.sens;
-    expect(rows).toHaveLength(sens.items.length);
-    expect(rows[0].querySelector('th')!.textContent).toBe(`${sens.items[0].label} (±20 %)`);
-    const note = root.querySelector('[data-chart-note="sensitivity"]')!.textContent!;
-    expect(note).toContain(`Am stärksten wirkt ${sens.items[0].label}`);
   });
 
   it('F12.6 Finanzierungskarte zeigt Sondertilgung mit Termin und Zinsersparnis', () => {

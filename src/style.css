@@ -891,3 +891,14 @@ td.ev-cell { white-space: normal; min-width: 220px; }
 .static-intro li { margin: 0.4em 0; }
 .static-intro h3 { font-size: 1rem; margin: 1.2em 0 0.3em; }
 .static-foot { margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--border); }
+
+/* Card "Einflussgrößen" (F27): layout of the sliders and the result block */
+.sensitivity .sens-sliders { display: grid; gap: 14px; }
+.sens-slider { min-width: 0; }
+.sens-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 12px; }
+.sens-value { font-weight: 600; font-variant-numeric: tabular-nums; }
+.sens-slider input[type='range'] { width: 100%; max-width: 100%; margin: 4px 0; }
+.sens-hint { margin: 0; }
+.sens-combo { margin: 16px 0 6px; font-weight: 600; overflow-wrap: anywhere; }
+.sens-table th, .sens-table td { white-space: normal; }
+.sens-reset { margin-top: 12px; }

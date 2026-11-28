@@ -16,9 +16,8 @@ import {
 import type { InstallComparison } from '../core/compare';
 import type { KeyEvent, KeyEvents } from '../core/events';
 import { energyTotal, type EnergyMonth, type EnergyParts, type EnergyYear } from '../core/energy';
-import type { Sensitivity } from '../core/sensitivity';
 import type { PriceRow, RunResult } from '../core/simulation';
-import { energyLabels, MONTH_SHORT, sensitivityLabel, type ChartId } from './charts';
+import { energyLabels, MONTH_SHORT, type ChartId } from './charts';
 import { fmtEur, fmtMonth, fmtNum } from './format';
 
 /*
@@ -57,7 +56,7 @@ export class Charts {
     private pixelRatio?: number,
   ) {}
 
-  update(run: RunResult, prices: PriceRow[], cmp: InstallComparison, events?: KeyEvents, sens?: Sensitivity, energy?: EnergyYear): void {
+  update(run: RunResult, prices: PriceRow[], cmp: InstallComparison, events?: KeyEvents, energy?: EnergyYear): void {
     const c = palette();
     Chart.defaults.color = c.text;
     Chart.defaults.borderColor = c.grid;
@@ -219,44 +218,6 @@ export class Charts {
                   const p = [m.need, m.old, m.hp][ctx.datasetIndex];
                   const value = `${ctx.dataset.label}: ${kwh(Number(ctx.parsed.y ?? 0))}`;
                   return p ? [value, `   ${parts(p).join(' · ')}`] : value;
-                },
-              },
-            },
-          },
-        },
-      });
-    }
-
-    // Sensitivity (F27): tornado chart – bars from the base saving to the saving with the lower/higher assumption
-    if (sens) {
-      const items = sens.items;
-      const floating = (label: string, color: string, pick: 'low' | 'high') => ({
-        label,
-        data: items.map((x) => [sens.base, x[pick]] as [number, number]),
-        backgroundColor: color,
-        borderColor: color,
-        grouped: false,
-        barPercentage: 0.7,
-      });
-      this.render('sensitivity', {
-        type: 'bar',
-        data: {
-          labels: items.map((x) => sensitivityLabel(x.id, x.label)),
-          datasets: [floating('Annahme niedriger', c.kfw, 'low'), floating('Annahme höher', c.ref, 'high')],
-        } as ChartConfiguration['data'],
-        options: {
-          indexAxis: 'y',
-          scales: {
-            x: { ...eurAxis(`Ersparnis mit Wärmepumpe (heute: ${fmtEur(sens.base)})`) },
-            y: { ticks: { autoSkip: false } },
-          },
-          plugins: {
-            tooltip: {
-              callbacks: {
-                label: (ctx: TooltipItem<ChartType>) => {
-                  const x = items[ctx.dataIndex];
-                  const high = ctx.datasetIndex === 1;
-                  return `${high ? 'höher' : 'niedriger'}: ${high ? x.highValue : x.lowValue} → Ersparnis ${fmtEur(high ? x.high : x.low)}`;
                 },
               },
             },

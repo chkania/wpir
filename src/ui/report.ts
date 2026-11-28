@@ -39,7 +39,6 @@ export interface ReportData {
 export const REPORT_CHARTS: [string, string][] = [
   ['cumulative', 'Kumulierte Kosten'],
   ['energy', 'Energie je Monat'],
-  ['sensitivity', 'Einflussgrößen: Ersparnis, wenn eine Annahme niedriger oder höher ist'],
 ];
 
 const SCENARIO = { all: 'beide WP-Wege', ref: 'ohne WP', kfw: 'KfW-Weg', tax: 'Steuer-Weg' } as const;
