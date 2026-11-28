@@ -1,10 +1,9 @@
 import type { InstallComparison } from '../core/compare';
 import { energyTotal, type EnergyMonth, type EnergyParts, type EnergyYear } from '../core/energy';
-import { VARIATION_TEXT, type Sensitivity } from '../core/sensitivity';
 import type { PriceRow, RunResult } from '../core/simulation';
 import { fmtEur, fmtMonth, fmtNum } from './format';
 
-export type ChartId = 'cumulative' | 'annual' | 'prices' | 'install' | 'energy' | 'sensitivity';
+export type ChartId = 'cumulative' | 'annual' | 'prices' | 'install' | 'energy';
 
 export const MONTH_SHORT = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
 /** Dataset labels of the energy chart (F29). */
@@ -14,10 +13,6 @@ export const energyLabels = (e: EnergyYear) => ({
   hp: 'Strom – Wärmepumpe',
   hpGas: 'Gas zum Kochen – mit Wärmepumpe',
 });
-
-/** Bar label of a sensitivity item incl. its variation, e.g. "JAZ (±0,5)". */
-export const sensitivityLabel = (id: string, label: string) => `${label} (${VARIATION_TEXT[id] ?? ''})`;
-
 
 /** Tabular version of a chart (text alternative, WCAG 1.1.1). */
 export interface ChartTable {
@@ -31,7 +26,6 @@ export function chartTables(
   run: RunResult,
   prices: PriceRow[],
   cmp: InstallComparison,
-  sens?: Sensitivity,
   energy?: EnergyYear,
 ): Partial<Record<ChartId, ChartTable>> {
   const scen = [
@@ -55,23 +49,6 @@ export function chartTables(
       rows: cmp.rows.map((r) => [fmtMonth(r.installMonth), fmtEur(r.kfwTotal), r.taxFeasible ? fmtEur(r.taxTotal) : 'nicht möglich', fmtEur(cmp.refTotal)]),
     },
     ...(energy ? { energy: energyTable(energy) } : {}),
-    ...(sens
-      ? {
-          sensitivity: {
-            caption: `Ersparnis mit Wärmepumpe, wenn jeweils eine Annahme niedriger oder höher ist (heute: ${fmtEur(sens.base)}), sortiert nach Einfluss`,
-            head: ['Annahme', 'heute', 'niedriger', 'Ersparnis', 'höher', 'Ersparnis', 'Spanne'],
-            rows: sens.items.map((x) => [
-              sensitivityLabel(x.id, x.label),
-              x.base,
-              x.lowValue,
-              fmtEur(x.low),
-              x.highValue,
-              fmtEur(x.high),
-              fmtEur(Math.abs(x.high - x.low)),
-            ]),
-          },
-        }
-      : {}),
   };
 }
 

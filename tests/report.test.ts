@@ -28,6 +28,14 @@ const report = (mut?: (i: Inputs) => void, extra: { shareUrl?: string } = {}) =>
 const field = (path: string) => SECTIONS.flatMap((s) => s.fields).find((f) => f.path === path)!;
 
 describe('F30 Bericht', () => {
+  it('F30.2 Bericht enthält nur die Diagramme „Kumulierte Kosten“ und „Energie je Monat“, ohne Einflussgrößen', () => {
+    expect(REPORT_CHARTS.map(([id]) => id)).toEqual(['cumulative', 'energy']);
+    const html = report();
+    expect(html.match(/data-report-chart="/g)).toHaveLength(2);
+    expect(html).not.toContain('data-report-chart="sensitivity"');
+    expect(html).not.toContain('Einflussgrößen');
+  });
+
   it('enthält alle Abschnitte, Diagramm-Platzhalter, Haftungshinweis und Adresse ohne Eingaben', () => {
     const html = report();
     for (const h of ['Ergebnis', 'Haus und Wärmepumpe', 'Diagramme', 'Förderung und Finanzierung', 'Wichtige Ereignisse und Hinweise', 'Eingaben']) {

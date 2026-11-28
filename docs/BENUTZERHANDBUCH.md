@@ -19,7 +19,7 @@ Jedes Eingabefeld hat einen kleinen **„i“-Knopf**. Er zeigt den Standardwert
 
 - **Kopfbereich:** Oben links Titel mit Version und dem Link **„Über diesen Rechner“** (Entstehung des Rechners), oben rechts der Umschalter **Hell | Dunkel | Auto**. Darunter die Werkzeugleiste mit **Hilfe**, den Menüs „Szenarien“, „Teilen & Export“ und „Mehr“ sowie den Schaltflächen „Vergleichen“ und „Bericht“.
 - **Links – Eingaben:** in aufklappbare Abschnitte gegliedert. Ein Klick auf die Überschrift klappt einen Abschnitt auf oder zu; **„Alle aufklappen“** und **„Alle zuklappen“** oberhalb der Abschnitte öffnen bzw. schließen alle auf einmal. Abschnitte mit „Experten“ enthalten die Förder- und Steuerregeln; sie müssen normalerweise nicht geändert werden.
-- **Rechts – Ergebnisse:** Kennzahlen, wichtige Ereignisse und Hinweise, Diagramme, Förderdetails, Stromtarifvergleich, Vergleich der Umrüstzeitpunkte und Jahresübersicht.
+- **Rechts – Ergebnisse:** Kennzahlen, wichtige Ereignisse und Hinweise, Diagramme, Einflussgrößen, Förderdetails, Stromtarifvergleich, Vergleich der Umrüstzeitpunkte und Jahresübersicht.
 
 Auf dem Smartphone stehen die Eingaben oben und die Ergebnisse darunter.
 
@@ -96,7 +96,7 @@ Die Schaltfläche „Bericht“ erstellt eine **kompakte Zusammenfassung** für 
 - oben rechts einen **QR-Code**: Mit dem Handy gescannt, öffnet er den Rechner (über die kurze Adresse wpir.de) mit genau diesen Eingaben – so kann z. B. die Energieberatung direkt weiterrechnen. Der Text darunter ist mit demselben Link hinterlegt: In der PDF-Datei öffnet ein Klick darauf den Rechner mit diesen Eingaben. Die Bemerkungen sind darin nicht enthalten (sie stehen im Bericht),
 - die Kennzahlen (Gesamtkosten, Ersparnis, Amortisation, CO₂-Einsparung) und den günstigsten Umrüstzeitpunkt,
 - Eckdaten zu Haus und Wärmepumpe (Kennwert, Effizienzklasse, Heizlast, JAZ-Schätzung, ggf. PV-Deckung),
-- die Diagramme „Kumulierte Kosten“, „Energie je Monat“ und „Einflussgrößen“,
+- die Diagramme „Kumulierte Kosten“ und „Energie je Monat“,
 - KfW-Zuschuss, Steuerbonus und Finanzierung,
 - wichtige Ereignisse und Hinweise,
 - alle sichtbaren Eingaben; aus den Experten-Abschnitten nur die Werte, die Sie geändert haben.
@@ -141,6 +141,20 @@ Speichert die ganze Berechnung als **Markdown-Datei** für einen KI-Assistenten 
 - den vollständigen **Rechenweg** mit allen Zwischenwerten und den Kosten je Jahr,
 - **alle Eingaben**, auch die Experten-Einstellungen: je Feld den aktuellen Wert, den Standardwert, die Bedeutung, die Herkunft des Standardwerts und die amtlichen Fundstellen,
 - die Eingaben als JSON und im Anhang die Monatswerte.
+
+In der KI-Datei stehen die **Einflussgrößen** als Tabelle mit festen Variationen (nicht als Regler). Jede Annahme wird einzeln niedriger und höher gerechnet, alle anderen bleiben gleich. Angegeben ist die **Ersparnis mit Wärmepumpe**; der jeweils bessere Weg (KfW-Zuschuss oder Steuerbonus) wird je Variante neu bestimmt. Die Annahmen mit den längsten Spannen lohnt es sich am ehesten genauer zu prüfen, z. B. durch ein Angebot oder die eigene Rechnung.
+
+| Annahme | Variation |
+|---|---|
+| Gas- bzw. Ölpreis heute | ±20 % |
+| Steigerung Gas-/Ölpreis | ±2 Prozentpunkte |
+| Strompreis heute | ±20 % |
+| Steigerung Strompreis | ±2 Prozentpunkte |
+| Jahresarbeitszahl | ±0,5 |
+| Investition Wärmepumpe | ±20 % |
+| CO₂-Preis | ±30 % |
+| Kreditzinsen (nur mit Kredit) | ±1 Prozentpunkt |
+| Opportunitätszins | ±1 Prozentpunkt |
 
 Schlägt der KI-Assistent geänderte Werte vor, tragen Sie diese im Rechner ein. Oder Sie speichern das geänderte JSON als `.json`-Datei und laden es mit **Import**. Dann rechnet der Rechner selbst nach; Zahlen, die ein KI-Assistent selbst ausrechnet, können falsch sein.
 
@@ -414,23 +428,23 @@ Förderbedingungen, Preise und Zinsen werden regelmäßig geprüft. Liegt die le
 - **Preisentwicklung:** Kosten je kWh Wärme aus Altanlage und Wärmepumpe sowie der CO₂-Preis.
 - **Zeitpunkt der Umrüstung:** Gesamtkosten je Umrüstzeitpunkt im Vergleich zu „ohne Wärmepumpe“.
 - **Energie je Monat:** stellt für ein typisches Jahr den Bedarf dem Verbrauch gegenüber, jeweils in kWh. Je Monat drei Balken: **Bedarf** (Nutzenergie für Heizen, Warmwasser und – wenn heute mit Gas gekocht wird – Kochen), **Gas bzw. Heizöl der Altanlage** und **Strom der Wärmepumpe** (bleibt das Kochen beim Gas, kommt dieses Gas als heller Teil dazu). Der Tooltip teilt jeden Balken in Heizen, Warmwasser und Kochen auf. Der Satz über dem Diagramm nennt die Jahressummen und wie viele kWh Gas/Öl bzw. Strom je kWh Bedarf nötig sind – das ist die Effizienz. Als Nutzenergie beim Kochen gilt die Hälfte des Gases (ein Gasherd bringt etwa 40–55 % der Energie in den Topf). Die Jahresarbeitszahl ist im Rechner ein Jahresmittel; tatsächlich arbeitet die Wärmepumpe an kalten Tagen etwas weniger effizient als im Jahresmittel.
-- **Einflussgrößen:** beantwortet „Was beeinflusst mein Ergebnis am stärksten?“. Jede wichtige Annahme wird einzeln etwas niedriger und höher gerechnet, alle anderen bleiben gleich. Die Balken zeigen, wie sich die **Ersparnis mit Wärmepumpe** dadurch ändert; der längste Balken steht oben. Blau = Annahme niedriger, orange = Annahme höher. Darüber steht in einem Satz, welche Annahme am stärksten wirkt. Durchgerechnet werden:
-
-  | Annahme | Variation |
-  |---|---|
-  | Gas- bzw. Ölpreis heute | ±20 % |
-  | Steigerung Gas-/Ölpreis | ±2 Prozentpunkte |
-  | Strompreis heute | ±20 % |
-  | Steigerung Strompreis | ±2 Prozentpunkte |
-  | Jahresarbeitszahl | ±0,5 |
-  | Investition Wärmepumpe | ±20 % |
-  | CO₂-Preis | ±30 % |
-  | Kreditzinsen (nur mit Kredit) | ±1 Prozentpunkt |
-  | Opportunitätszins | ±1 Prozentpunkt |
-
-  Je Variante wird der jeweils bessere Weg (KfW-Zuschuss oder Steuerbonus) neu bestimmt. Die Annahmen mit den längsten Balken lohnt es sich am ehesten genauer zu prüfen, z. B. durch ein Angebot oder die eigene Rechnung.
-
 Unter jedem Diagramm zeigt **Werte als Tabelle** dieselben Zahlen zum Nachlesen (auch für Screenreader). Die Reiter wechseln Sie mit der Maus oder per Tastatur: Tab auf die Reiterleiste, dann Pfeiltasten links/rechts, Pos1 und Ende.
+
+### Einflussgrößen
+
+Die Karte **Einflussgrößen** steht unter den Diagrammen und beantwortet: Was ändert sich am Ergebnis, wenn sich eine Annahme anders entwickelt? Sie verschieben Regler; Ihre Eingaben im Formular bleiben dabei unverändert.
+
+- **Regler** in dieser Reihenfolge: Steigerung Gaspreis (ohne CO₂) bzw. Ölpreis, Steigerung Strompreis, Jahresarbeitszahl (JAZ), Investition gesamt (brutto), CO₂-Preis, Kreditzinsen und Opportunitätszins. Der Regler für die **Kreditzinsen** erscheint nur, wenn im Basisfall ein Kredit läuft; ohne Kredit (nur Eigenkapital) sind es sechs Regler. Der **CO₂-Preis** wird am letzten Stützpunkt des Preispfads angezeigt (2045, wenn Sie nichts geändert haben).
+- **Spannen:** Jeder Regler startet bei Ihrem Wert aus dem Formular. Die Steigerungen reichen 20 **Prozentpunkte** nach oben und unten, die Kreditzinsen 5 Prozentpunkte, die JAZ 2 (absolut), die Investition 20 % (**relativ**), der CO₂-Preis 70 % bis 130 % des Pfads (**relativ**). Unter jedem Regler steht Ihre Eingabe und die Spanne mit ihrer Art.
+- **Warum die Voreinstellung nicht immer in der Mitte liegt:** Steigerungen und Zinsen fallen nicht unter 0 %, die JAZ nicht unter 1,0. Liegt Ihr Wert an dieser Grenze oder darunter, beginnt die Spanne dort. Beispiel: Bei 2 % Steigerung reicht der Regler von 0 % bis 22 %, bei 2,05 % von 0,05 % bis 22,05 %. Ist die Investition 0 €, ist ihr Regler deaktiviert (Hinweis „keine Spanne“).
+- **Realistische Größen:** Preissteigerungen sind über Jahrzehnte oft nur wenige Prozent pro Jahr. Die breite Spanne zeigt bewusst auch Extremfälle. Eine Steigerung ist ein durchschnittlicher Satz je Jahr über den ganzen Betrachtungszeitraum, keine Prognose für einzelne Jahre.
+- **Schritte:** Steigerungen, Zinsen und JAZ springen in 0,1er-Schritten, die Investition in 100-€-Schritten, der CO₂-Preis in 5-Prozentpunkt-Schritten. Die Voreinstellung ist immer genau erreichbar. Mit der Tastatur ändern die Pfeiltasten um einen Schritt; Pos1 und Ende springen an die Grenzen.
+- **Mehrere Regler:** Verschieben Sie mehrere Regler, rechnet der Rechner diese Kombination gemeinsam, wie mehrere geänderte Eingaben im Formular. Die Wirkungen einzelner Regler werden nicht addiert. Ein Regler auf seiner Voreinstellung zählt nicht mit.
+- **Ergebnisblock:** Die Tabelle zeigt links „Vorgabe“ (Ergebnis Ihrer Eingaben) und rechts „bei Einstellung“ (Ergebnis mit den verschobenen Reglern). Darüber steht, welche Regler verschoben sind, z. B. „Steigerung Strompreis 5,0 % p. a., JAZ 3,0“; ohne Verschiebung „keine Änderung“. Die Kennzahlen im Kopfbereich ändern sich durch die Regler nicht. Scheitert eine Einstellung, steht die Meldung unter der Tabelle.
+- **Amortisation:** Sie liegt oft beim Kesseltausch im Referenzfall (Monat 60, wenn die alte Heizung dann ersetzt wird). Ab diesem Monat ist der Referenzfall teurer; deshalb bewegt sich die Amortisation mit den Reglern nur, wenn sich die Mehrkosten der Wärmepumpe bis dahin ändern – das ist bei Steigerungen der Gaspreise der Fall, bei JAZ, Investition und Strompreis meist nicht.
+- **Zurücksetzen:** Die Schaltfläche „Auf heutige Werte zurücksetzen“ stellt alle Regler auf ihre Voreinstellung; beide Spalten sind dann gleich.
+- **Neu gesetzt:** Ändern Sie eine Eingabe im Formular, importieren Sie Daten oder laden Sie einen Link oder ein Szenario, stehen alle Regler wieder auf dem neuen Wert.
+- **Keine Speicherung:** Die Reglerstellungen werden nicht gespeichert – nicht im Browser, nicht im Link, nicht im JSON-Export und nicht im KI-Export. Sie gelten nur bis zum nächsten Neuladen oder bis zur nächsten Eingabe. Der Bericht enthält die Einflussgrößen nicht.
 
 ### KfW-Zuschuss, Steuerbonus, Finanzierung
 
